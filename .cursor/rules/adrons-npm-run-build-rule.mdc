@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+When working in a web project, specifically with npm and tools like React, whenever any feature or addition is made run `npm run build` to verify the build still works once the changes are made. If an error occurs, offer to resolve the error.
