@@ -39,11 +39,14 @@ export default function Map({ onLocationSelect }: MapProps) {
           });
 
           // Add a marker for user's location
-          new maptilersdk.Marker({
+          const userMarker = new maptilersdk.Marker({
             color: '#0000FF' // Blue marker for user location
           })
             .setLngLat([longitude, latitude])
             .addTo(map.current!);
+            
+          setMarker(userMarker);
+          onLocationSelect(latitude, longitude);
         },
         (error) => {
           console.warn('Error getting user location:', error.message);
@@ -59,7 +62,7 @@ export default function Map({ onLocationSelect }: MapProps) {
     return () => {
       map.current?.remove();
     };
-  }, []);
+  }, [onLocationSelect]);
 
   const handleMapClick = useCallback((e: { lngLat: { lng: number; lat: number } }) => {
     const { lng, lat } = e.lngLat;
