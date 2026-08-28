@@ -1,0 +1,29 @@
+// Client-side UI state: which vehicle types / agencies are visible on the map.
+
+import { create } from "zustand";
+import { ENABLED_AGENCIES } from "@/lib/agencies";
+import type { VehicleType } from "@/lib/types";
+
+// Agencies that can appear on the map (enabled feeds + mock ferries).
+export const FILTERABLE_AGENCIES: { code: string; name: string }[] = [
+  ...ENABLED_AGENCIES.map((a) => ({ code: a.code, name: a.name })),
+  { code: "WSF", name: "Washington State Ferries" },
+];
+
+export const VEHICLE_TYPES: VehicleType[] = ["bus", "train", "ferry"];
+
+interface FiltersState {
+  typeVisible: Record<VehicleType, boolean>;
+  agencyVisible: Record<string, boolean>;
+  setType: (type: VehicleType, visible: boolean) => void;
+  setAgency: (code: string, visible: boolean) => void;
+}
+
+export const useFilters = create<FiltersState>((set) => ({
+  typeVisible: { bus: true, train: true, ferry: true },
+  agencyVisible: Object.fromEntries(FILTERABLE_AGENCIES.map((a) => [a.code, true])),
+  setType: (type, visible) =>
+    set((s) => ({ typeVisible: { ...s.typeVisible, [type]: visible } })),
+  setAgency: (code, visible) =>
+    set((s) => ({ agencyVisible: { ...s.agencyVisible, [code]: visible } })),
+}));
