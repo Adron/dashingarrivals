@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import ArrivalsPanel from "@/components/ArrivalsPanel";
 import FilterControls from "@/components/FilterControls";
 import TopBar from "@/components/TopBar";
 import { useVehicleStream } from "@/components/useVehicleStream";
@@ -16,6 +17,7 @@ export default function Home() {
       <MapView snapshot={snapshot} />
       <TopBar snapshot={snapshot} error={error} />
       <FilterControls />
+      <ArrivalsPanel />
     </main>
   );
 }

@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { ENABLED_AGENCIES } from "@/lib/agencies";
-import type { VehicleType } from "@/lib/types";
+import type { Stop, VehicleType } from "@/lib/types";
 
 // Agencies that can appear on the map (enabled feeds + mock ferries).
 export const FILTERABLE_AGENCIES: { code: string; name: string }[] = [
@@ -26,4 +26,14 @@ export const useFilters = create<FiltersState>((set) => ({
     set((s) => ({ typeVisible: { ...s.typeVisible, [type]: visible } })),
   setAgency: (code, visible) =>
     set((s) => ({ agencyVisible: { ...s.agencyVisible, [code]: visible } })),
+}));
+
+interface SelectedStopState {
+  selectedStop: Stop | null;
+  setSelectedStop: (stop: Stop | null) => void;
+}
+
+export const useSelectedStop = create<SelectedStopState>((set) => ({
+  selectedStop: null,
+  setSelectedStop: (stop) => set({ selectedStop: stop }),
 }));

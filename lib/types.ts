@@ -41,3 +41,35 @@ export interface VehicleSnapshot {
   /** True when the snapshot is synthetic mock data (dev / fallback). */
   mock?: boolean;
 }
+
+/** A transit stop (from OneBusAway stops-for-location). */
+export interface Stop {
+  /** OBA stop id, e.g. "1_1040". */
+  id: string;
+  /** Public stop number, e.g. "1040". */
+  code: string;
+  name: string;
+  lat: number;
+  lon: number;
+  direction?: string;
+  routeIds: string[];
+}
+
+/** One upcoming arrival at a stop. */
+export interface Arrival {
+  routeShortName: string;
+  headsign: string;
+  /** True when arrivalTime is a real-time prediction (vs. scheduled). */
+  predicted: boolean;
+  /** Epoch ms of the arrival (predicted when available, else scheduled). */
+  arrivalTime: number;
+  scheduledTime: number;
+  status?: string;
+}
+
+/** Real-time arrivals for a single stop. */
+export interface StopArrivals {
+  stopName?: string;
+  stopCode?: string;
+  arrivals: Arrival[];
+}

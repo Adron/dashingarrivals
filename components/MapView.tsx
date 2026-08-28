@@ -8,8 +8,8 @@ import { useEffect, useRef } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { clientConfig } from "@/lib/clientConfig";
-import { useFilters } from "@/lib/store";
-import type { Vehicle, VehicleSnapshot, VehicleType } from "@/lib/types";
+import { useFilters, useSelectedStop } from "@/lib/store";
+import type { Stop, Vehicle, VehicleSnapshot, VehicleType } from "@/lib/types";
 
 const TYPE_COLORS: Record<VehicleType, string> = {
   bus: "#2563eb",
@@ -19,6 +19,11 @@ const TYPE_COLORS: Record<VehicleType, string> = {
 
 const SOURCE_ID = "vehicles";
 const LAYER_ID = "vehicles-circle";
+
+const STOP_SOURCE = "stops";
+const STOP_LAYER = "stops-circle";
+const STOP_MIN_ZOOM = 14; // only show stops when zoomed in
+const EMPTY_FC: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
 
 interface Pos {
   lat: number;
@@ -133,7 +138,82 @@ export default function MapView({ snapshot }: { snapshot: VehicleSnapshot | null
       rafRef.current = requestAnimationFrame(renderFrame);
     };
 
+    // Load stops for the current viewport (only when zoomed in), debounced.
+    let stopsTimer: ReturnType<typeof setTimeout> | undefined;
+    const loadStops = async () => {
+      const m = mapRef.current;
+      const src = m?.getSource(STOP_SOURCE) as maplibregl.GeoJSONSource | undefined;
+      if (!m || !src) return;
+      if (m.getZoom() < STOP_MIN_ZOOM) {
+        src.setData(EMPTY_FC);
+        return;
+      }
+      const b = m.getBounds();
+      const lat = (b.getNorth() + b.getSouth()) / 2;
+      const lon = (b.getEast() + b.getWest()) / 2;
+      const latSpan = b.getNorth() - b.getSouth();
+      const lonSpan = b.getEast() - b.getWest();
+      try {
+        const res = await fetch(
+          `/api/stops?lat=${lat}&lon=${lon}&latSpan=${latSpan}&lonSpan=${lonSpan}`,
+        );
+        if (!res.ok) return;
+        const { stops } = (await res.json()) as { stops: Stop[] };
+        src.setData({
+          type: "FeatureCollection",
+          features: (stops ?? []).map((s) => ({
+            type: "Feature",
+            geometry: { type: "Point", coordinates: [s.lon, s.lat] },
+            properties: { id: s.id, code: s.code, name: s.name, direction: s.direction ?? "" },
+          })),
+        });
+      } catch {
+        // ignore transient errors; the next moveend retries
+      }
+    };
+
     map.on("load", () => {
+      // Stops layer sits below vehicles so vehicles stay clickable on top.
+      map.addSource(STOP_SOURCE, { type: "geojson", data: EMPTY_FC });
+      map.addLayer({
+        id: STOP_LAYER,
+        type: "circle",
+        source: STOP_SOURCE,
+        minzoom: STOP_MIN_ZOOM,
+        paint: {
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 14, 3, 18, 6],
+          "circle-color": "#ffffff",
+          "circle-stroke-color": "#334155",
+          "circle-stroke-width": 2,
+        },
+      });
+      map.on("click", STOP_LAYER, (e: maplibregl.MapLayerMouseEvent) => {
+        const f = e.features?.[0];
+        if (!f || f.geometry.type !== "Point") return;
+        const p = f.properties ?? {};
+        const [lon, lat] = f.geometry.coordinates as [number, number];
+        useSelectedStop.getState().setSelectedStop({
+          id: String(p.id),
+          code: String(p.code ?? ""),
+          name: String(p.name ?? ""),
+          lat,
+          lon,
+          direction: p.direction ? String(p.direction) : undefined,
+          routeIds: [],
+        });
+      });
+      map.on("mouseenter", STOP_LAYER, () => {
+        map.getCanvas().style.cursor = "pointer";
+      });
+      map.on("mouseleave", STOP_LAYER, () => {
+        map.getCanvas().style.cursor = "";
+      });
+
+      map.on("moveend", () => {
+        clearTimeout(stopsTimer);
+        stopsTimer = setTimeout(loadStops, 350);
+      });
+
       map.addSource(SOURCE_ID, {
         type: "geojson",
         data: { type: "FeatureCollection", features: [] },
@@ -182,6 +262,7 @@ export default function MapView({ snapshot }: { snapshot: VehicleSnapshot | null
 
     return () => {
       cancelAnimationFrame(rafRef.current);
+      clearTimeout(stopsTimer);
       resizeObserver.disconnect();
       map.remove();
       mapRef.current = null;
