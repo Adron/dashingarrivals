@@ -5,6 +5,7 @@ import { ENABLED_AGENCIES, obaVehiclePositionsUrl } from "@/lib/agencies";
 import { config } from "@/lib/config";
 import { fetchVehiclePositions } from "@/lib/gtfs/decode";
 import { normalizeAgencyVehicles } from "@/lib/gtfs/normalize";
+import { routesForAgency } from "@/lib/routesLookup";
 import { buildMockSnapshot } from "@/lib/mock";
 import type { SourceStatus, Vehicle, VehicleSnapshot } from "@/lib/types";
 
@@ -20,7 +21,7 @@ export async function buildSnapshot(): Promise<VehicleSnapshot> {
       try {
         const url = obaVehiclePositionsUrl(config.obaBaseUrl, agency.obaId, config.obaApiKey);
         const raw = await fetchVehiclePositions(url);
-        const normalized = normalizeAgencyVehicles(raw, agency);
+        const normalized = normalizeAgencyVehicles(raw, agency, routesForAgency(agency.code));
         vehicles.push(...normalized);
         sources.push({ agency: agency.code, ok: true, count: normalized.length });
       } catch (err) {
