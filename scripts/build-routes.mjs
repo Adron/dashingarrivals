@@ -21,6 +21,7 @@ const KEY = process.env.OBA_API_KEY ?? "TEST";
 const AGENCIES = [
   { code: "KCM", obaId: "1" },
   { code: "ST", obaId: "40" },
+  { code: "CT", obaId: "29" },
   { code: "PT", obaId: "3" },
   { code: "KT", obaId: "20" },
   { code: "ET", obaId: "97" },

@@ -1060,6 +1060,212 @@
       "color": "DA7C00"
     }
   },
+  "CT": {
+    "101": {
+      "shortName": "101",
+      "longName": "Mariner P&R - Aurora Village TC",
+      "type": 3,
+      "color": "0070C0"
+    },
+    "102": {
+      "shortName": "102",
+      "longName": "Edmonds Station - Lynnwood City Center Station",
+      "type": 3,
+      "color": "0070C0"
+    },
+    "103": {
+      "shortName": "103",
+      "longName": "Hardeson Road - Lynnwood City Center Station",
+      "type": 3,
+      "color": "0070C0"
+    },
+    "106": {
+      "shortName": "106",
+      "longName": "Mariner P&R - UW Bothell/Cascadia College",
+      "type": 3,
+      "color": "0070C0"
+    },
+    "109": {
+      "shortName": "109",
+      "longName": "Ash Way P&R - Lake Stevens TC",
+      "type": 3,
+      "color": "0070C0"
+    },
+    "111": {
+      "shortName": "111",
+      "longName": "Brier - Mountlake Terrace Station",
+      "type": 3,
+      "color": "0070C0"
+    },
+    "112": {
+      "shortName": "112",
+      "longName": "Mountlake Terrace Station - Ash Way P&R",
+      "type": 3,
+      "color": "0070C0"
+    },
+    "114": {
+      "shortName": "114",
+      "longName": "Aurora Village TC - Lynnwood City Center Station",
+      "type": 3,
+      "color": "0070C0"
+    },
+    "117": {
+      "shortName": "117",
+      "longName": "Mukilteo Ferry - Lynnwood City Center Station",
+      "type": 3,
+      "color": "0070C0"
+    },
+    "119": {
+      "shortName": "119",
+      "longName": "Ash Way P&R - Mountlake Terrace Station",
+      "type": 3,
+      "color": "0070C0"
+    },
+    "120": {
+      "shortName": "120",
+      "longName": "UW Bothell/Cascadia - Lynnwood City Center Station",
+      "type": 3,
+      "color": "0070C0"
+    },
+    "121": {
+      "shortName": "121",
+      "longName": "Ash Way P&R - UW Bothell/Cascadia College",
+      "type": 3,
+      "color": "0070C0"
+    },
+    "130": {
+      "shortName": "130",
+      "longName": "Edmonds Station - Lynnwood City Center Station",
+      "type": 3,
+      "color": "0070C0"
+    },
+    "166": {
+      "shortName": "166",
+      "longName": "Edmonds Station - Silver Firs",
+      "type": 3,
+      "color": "0070C0"
+    },
+    "201": {
+      "shortName": "201",
+      "longName": "Smokey Point TC - Lynnwood City Center Station",
+      "type": 3,
+      "color": "0070C0"
+    },
+    "202": {
+      "shortName": "202",
+      "longName": "Smokey Point TC - Lynnwood City Center Station",
+      "type": 3,
+      "color": "0070C0"
+    },
+    "209": {
+      "shortName": "209",
+      "longName": "Smokey Point TC - Lake Stevens TC",
+      "type": 3,
+      "color": "0070C0"
+    },
+    "220": {
+      "shortName": "220",
+      "longName": "Arlington - Smokey Point TC",
+      "type": 3,
+      "color": "0070C0"
+    },
+    "222": {
+      "shortName": "222",
+      "longName": "Marysville - Tulalip",
+      "type": 3,
+      "color": "0070C0"
+    },
+    "230": {
+      "shortName": "230",
+      "longName": "Darrington - Smokey Point TC",
+      "type": 3,
+      "color": "0070C0"
+    },
+    "240": {
+      "shortName": "240",
+      "longName": "Stanwood Downtown - Smokey Point TC",
+      "type": 3,
+      "color": "0070C0"
+    },
+    "270": {
+      "shortName": "270",
+      "longName": "Gold Bar - Everett Station",
+      "type": 3,
+      "color": "0070C0"
+    },
+    "271": {
+      "shortName": "271",
+      "longName": "Gold Bar - Everett Station",
+      "type": 3,
+      "color": "0070C0"
+    },
+    "280": {
+      "shortName": "280",
+      "longName": "Granite Falls P&R - Everett Station",
+      "type": 3,
+      "color": "0070C0"
+    },
+    "701": {
+      "shortName": "Swift Blue",
+      "longName": "Everett Station - Shoreline North/185th Station",
+      "type": 3,
+      "color": "006CFF"
+    },
+    "702": {
+      "shortName": "Swift Green",
+      "longName": "Seaway TC - Canyon Park P&R",
+      "type": 3,
+      "color": "00AA00"
+    },
+    "703": {
+      "shortName": "Swift Orange",
+      "longName": "Edmonds College - McCollum Park P&R",
+      "type": 3,
+      "color": "F24C21"
+    },
+    "901": {
+      "shortName": "901",
+      "longName": "Silver Firs - Lynnwood City Center Station",
+      "type": 3,
+      "color": "0070C0"
+    },
+    "903": {
+      "shortName": "903",
+      "longName": "Lake Stevens TC - Lynnwood City Center Station",
+      "type": 3,
+      "color": "0070C0"
+    },
+    "904": {
+      "shortName": "904",
+      "longName": "Marysville - Lynnwood City Center Station",
+      "type": 3,
+      "color": "0070C0"
+    },
+    "905": {
+      "shortName": "905",
+      "longName": "Stanwood Downtown - Lynnwood City Center Station",
+      "type": 3,
+      "color": "0070C0"
+    },
+    "907": {
+      "shortName": "907",
+      "longName": "Stanwood I-5 P&R - Paine Field Airport",
+      "type": 3,
+      "color": "0070C0"
+    },
+    "908": {
+      "shortName": "908",
+      "longName": "Bellevue - Snohomish P&R",
+      "type": 3,
+      "color": "0070C0"
+    },
+    "909": {
+      "shortName": "909",
+      "longName": "Edmonds Station - Mountlake Terrace Station",
+      "type": 3,
+      "color": "0070C0"
+    }
+  },
   "PT": {
     "1": {
       "shortName": "1",
@@ -1734,6 +1940,68 @@
       "longName": "Task",
       "type": 3,
       "color": "FFFFFF"
+    }
+  },
+  "ET": {
+    "1": {
+      "shortName": "2",
+      "longName": "S to Mariner P&R - N to Mall Station",
+      "type": 3,
+      "color": "000000"
+    },
+    "2": {
+      "shortName": "3",
+      "longName": "S to Seaway TC - N to Everett Station",
+      "type": 3,
+      "color": "000000"
+    },
+    "3": {
+      "shortName": "4",
+      "longName": "S to Everett Station - N to College Station",
+      "type": 3,
+      "color": "000000"
+    },
+    "4": {
+      "shortName": "7",
+      "longName": "S to Mall Station - N to College Station",
+      "type": 3,
+      "color": "000000"
+    },
+    "5": {
+      "shortName": "8",
+      "longName": "S to S Evt Frwy Station - N to Everett Station",
+      "type": 3,
+      "color": "000000"
+    },
+    "6": {
+      "shortName": "12",
+      "longName": "W to Seaway TC - E to Mall Station",
+      "type": 3,
+      "color": "000000"
+    },
+    "7": {
+      "shortName": "18",
+      "longName": "W to Mukilteo - E to Everett Station",
+      "type": 3,
+      "color": "000000"
+    },
+    "8": {
+      "shortName": "29",
+      "longName": "N to College Station - S to Mall Station",
+      "type": 3,
+      "color": "000000"
+    },
+    "18": {
+      "shortName": "6",
+      "longName": "N to Waterfront  - S to Everett Station",
+      "type": 3,
+      "color": "000000"
+    },
+    "857": {
+      "shortName": "19",
+      "longName": "S to Everett Station - N to College Station",
+      "type": 3,
+      "color": "000000"
     }
   },
   "IT": {
