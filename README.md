@@ -1,5 +1,14 @@
 # Puget Sound Transit — Live Map
 
+[![CI](https://github.com/Adron/dashingarrivals/actions/workflows/ci.yml/badge.svg)](https://github.com/Adron/dashingarrivals/actions/workflows/ci.yml)
+[![Vercel](https://img.shields.io/github/deployments/Adron/dashingarrivals/Production?logo=vercel&logoColor=white&label=vercel)](https://dashingarrivals.com/)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![MapLibre GL](https://img.shields.io/badge/MapLibre_GL-5-396CB2?logo=maplibre&logoColor=white)](https://maplibre.org/)
+
+**Live site:** [dashingarrivals.com](https://dashingarrivals.com/)
+
 A TriMet-style live transit map for the Puget Sound region (Seattle, Bellevue,
 Redmond, Tacoma, Everett, and beyond). It shows **every active transit vehicle in
 service in real time** — buses, trains, and (later) ferries — on an interactive

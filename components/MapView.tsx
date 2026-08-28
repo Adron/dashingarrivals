@@ -50,10 +50,13 @@ export default function MapView({ snapshot }: { snapshot: VehicleSnapshot | null
   const tweenStartRef = useRef(0);
   const settledRef = useRef(false);
 
-  // Filters mirrored into a ref for the loop.
+  // Filters mirrored into a ref for the render loop; kept in sync via effect.
   const { typeVisible, agencyVisible } = useFilters();
   const filtersRef = useRef({ typeVisible, agencyVisible });
-  filtersRef.current = { typeVisible, agencyVisible };
+  useEffect(() => {
+    filtersRef.current = { typeVisible, agencyVisible };
+    settledRef.current = false; // re-render one pass so the filter takes effect
+  }, [typeVisible, agencyVisible]);
 
   // Initialize the map once.
   useEffect(() => {
@@ -81,6 +84,54 @@ export default function MapView({ snapshot }: { snapshot: VehicleSnapshot | null
     requestAnimationFrame(() => map.resize());
     const resizeObserver = new ResizeObserver(() => map.resize());
     resizeObserver.observe(container);
+
+    // The animation loop lives inside the effect (not the render body) and reads
+    // only refs, so it always sees the latest state without re-binding.
+    const renderFrame = () => {
+      if (mapRef.current && readyRef.current && !settledRef.current) {
+        const src = map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+        if (src) {
+          const t = Math.min(1, (performance.now() - tweenStartRef.current) / clientConfig.pollMs);
+          const { typeVisible: tv, agencyVisible: av } = filtersRef.current;
+          const features: GeoJSON.Feature[] = [];
+
+          for (const [id, target] of targetsRef.current) {
+            if (tv[target.type] === false) continue;
+            if (av[target.agency] === false) continue;
+
+            const cur = currentRef.current.get(id) ?? { lat: target.lat, lon: target.lon };
+            const lat = cur.lat + (target.lat - cur.lat) * t;
+            const lon = cur.lon + (target.lon - cur.lon) * t;
+
+            features.push({
+              type: "Feature",
+              geometry: { type: "Point", coordinates: [lon, lat] },
+              properties: {
+                id,
+                agency: target.agency,
+                agencyName: target.agencyName,
+                type: target.type,
+                routeId: target.routeId ?? "",
+                routeShortName: target.routeShortName ?? "",
+                bearing: target.bearing ?? 0,
+                timestamp: target.timestamp,
+              },
+            });
+          }
+
+          src.setData({ type: "FeatureCollection", features });
+
+          if (t >= 1) {
+            // Commit final positions and idle until the next snapshot.
+            for (const [id, target] of targetsRef.current) {
+              currentRef.current.set(id, { lat: target.lat, lon: target.lon });
+            }
+            settledRef.current = true;
+          }
+        }
+      }
+      rafRef.current = requestAnimationFrame(renderFrame);
+    };
 
     map.on("load", () => {
       map.addSource(SOURCE_ID, {
@@ -136,7 +187,6 @@ export default function MapView({ snapshot }: { snapshot: VehicleSnapshot | null
       mapRef.current = null;
       readyRef.current = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // New snapshot: set tween targets, seed positions for newly-seen vehicles,
@@ -158,59 +208,8 @@ export default function MapView({ snapshot }: { snapshot: VehicleSnapshot | null
     targetsRef.current = targets;
     tweenStartRef.current = performance.now();
     settledRef.current = false;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshot?.updatedAt]);
-
-  function renderFrame() {
-    const map = mapRef.current;
-    if (map && readyRef.current && !settledRef.current) {
-      const src = map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
-      if (src) {
-        const t = Math.min(1, (performance.now() - tweenStartRef.current) / clientConfig.pollMs);
-        const { typeVisible, agencyVisible } = filtersRef.current;
-        const features: GeoJSON.Feature[] = [];
-
-        for (const [id, target] of targetsRef.current) {
-          if (typeVisible[target.type] === false) continue;
-          if (agencyVisible[target.agency] === false) continue;
-
-          const cur = currentRef.current.get(id) ?? { lat: target.lat, lon: target.lon };
-          const lat = cur.lat + (target.lat - cur.lat) * t;
-          const lon = cur.lon + (target.lon - cur.lon) * t;
-
-          features.push({
-            type: "Feature",
-            geometry: { type: "Point", coordinates: [lon, lat] },
-            properties: {
-              id,
-              agency: target.agency,
-              agencyName: target.agencyName,
-              type: target.type,
-              routeId: target.routeId ?? "",
-              routeShortName: target.routeShortName ?? "",
-              bearing: target.bearing ?? 0,
-              timestamp: target.timestamp,
-            },
-          });
-        }
-
-        src.setData({ type: "FeatureCollection", features });
-
-        if (t >= 1) {
-          // Commit final positions and idle until the next snapshot.
-          for (const [id, target] of targetsRef.current) {
-            currentRef.current.set(id, { lat: target.lat, lon: target.lon });
-          }
-          settledRef.current = true;
-        }
-      }
-    }
-    rafRef.current = requestAnimationFrame(renderFrame);
-  }
-
-  // Re-render immediately when filters change while settled.
-  useEffect(() => {
-    settledRef.current = false;
-  }, [typeVisible, agencyVisible]);
 
   return <div ref={containerRef} className="h-full w-full" />;
 }
