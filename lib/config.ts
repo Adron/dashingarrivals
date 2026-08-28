@@ -18,7 +18,10 @@ export const config = {
   /** How long a built snapshot is considered fresh, in ms. */
   cacheTtlMs: Number(process.env.CACHE_TTL_MS ?? "5000"),
 
-  /** Upstash Redis (Vercel Marketplace). Blank => in-process memory cache only. */
-  kvUrl: process.env.KV_REST_API_URL ?? "",
-  kvToken: process.env.KV_REST_API_TOKEN ?? "",
+  /**
+   * Upstash Redis (Vercel Marketplace). Accepts either the KV_* names or
+   * Upstash's native UPSTASH_REDIS_REST_* names. Blank => in-process cache only.
+   */
+  kvUrl: process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL ?? "",
+  kvToken: process.env.KV_REST_API_TOKEN ?? process.env.UPSTASH_REDIS_REST_TOKEN ?? "",
 };

@@ -65,6 +65,17 @@ See `.env.example` for all variables. Key ones:
   shared snapshot cache across serverless instances. Blank ⇒ per-instance memory cache.
 - `NEXT_PUBLIC_BASEMAP_STYLE_URL` — MapLibre style (default: OpenFreeMap, no key).
 
+## Deploy
+
+Hosted on **Vercel** (auto-detected Next.js). Functions are pinned to `pdx1`
+(Portland) via `vercel.json` for low latency to Seattle and the OneBusAway API.
+Push to `main` → production deploy; PRs → preview deploys.
+
+See **[DEPLOYMENT.md](./DEPLOYMENT.md)** for the full walkthrough: importing the
+repo, environment variables, optional Upstash Redis cache, and pointing
+`dashingarrivals.com` at it. Shortest path: import the repo at
+[vercel.com/new](https://vercel.com/new), set `OBA_API_KEY`, and deploy.
+
 ## Tech notes
 
 - **MapLibre GL v5** (not v6): v6 is ESM-only with a split module-worker that
