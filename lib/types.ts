@@ -57,6 +57,8 @@ export interface Stop {
 
 /** One upcoming arrival at a stop. */
 export interface Arrival {
+  /** OBA route id (agency-prefixed, e.g. "1_100264") — for alert matching. */
+  routeId?: string;
   routeShortName: string;
   headsign: string;
   /** True when arrivalTime is a real-time prediction (vs. scheduled). */
@@ -65,6 +67,28 @@ export interface Arrival {
   arrivalTime: number;
   scheduledTime: number;
   status?: string;
+}
+
+/** A GTFS-realtime service alert, normalized. */
+export interface AlertPeriod {
+  start?: number; // ms
+  end?: number; // ms
+}
+
+export interface Alert {
+  id: string;
+  agency: string;
+  header: string;
+  description?: string;
+  url?: string;
+  /** Human-readable effect (e.g. "Detour"), when the feed provides one. */
+  effect?: string;
+  severity?: number;
+  /** Agency-prefixed route ids this alert affects (e.g. "1_100264"). */
+  routeIds: string[];
+  /** Agency-prefixed stop ids this alert affects (e.g. "1_10190"). */
+  stopIds: string[];
+  activePeriods: AlertPeriod[];
 }
 
 /** Real-time arrivals for a single stop. */

@@ -7,6 +7,7 @@ import { useSyncExternalStore } from "react";
 import { useSelectedStop } from "@/lib/store";
 import { useStopArrivals } from "@/components/useStopArrivals";
 import { formatCountdown } from "@/lib/time";
+import type { Alert } from "@/lib/types";
 
 // Ticking clock so countdowns update between the 20s arrival polls.
 function subscribeClock(callback: () => void) {
@@ -17,7 +18,7 @@ function getNow() {
   return Date.now();
 }
 
-export default function ArrivalsPanel() {
+export default function ArrivalsPanel({ alerts }: { alerts: Alert[] }) {
   const { selectedStop, setSelectedStop } = useSelectedStop();
   const { data, loading, error } = useStopArrivals(selectedStop?.id ?? null);
   const now = useSyncExternalStore(subscribeClock, getNow, getNow);
@@ -25,6 +26,12 @@ export default function ArrivalsPanel() {
   if (!selectedStop) return null;
 
   const arrivals = data?.arrivals ?? [];
+
+  // Alerts affecting this stop directly, or any route arriving here.
+  const routeIds = new Set(arrivals.map((a) => a.routeId).filter(Boolean) as string[]);
+  const stopAlerts = alerts.filter(
+    (a) => a.stopIds.includes(selectedStop.id) || a.routeIds.some((r) => routeIds.has(r)),
+  );
 
   return (
     <aside
@@ -51,6 +58,26 @@ export default function ArrivalsPanel() {
       </header>
 
       <div className="px-2 py-2">
+        {stopAlerts.length > 0 && (
+          <div className="mb-2 rounded-lg border border-amber-300 bg-amber-50 p-2 dark:border-amber-800 dark:bg-amber-950/40">
+            <p className="mb-1 text-xs font-semibold text-amber-800 dark:text-amber-300">
+              ⚠ {stopAlerts.length} alert{stopAlerts.length === 1 ? "" : "s"} affecting this stop
+            </p>
+            <ul className="space-y-1">
+              {stopAlerts.slice(0, 3).map((a) => (
+                <li key={a.id} className="text-xs leading-snug text-amber-900 dark:text-amber-200">
+                  {a.url ? (
+                    <a href={a.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                      {a.header}
+                    </a>
+                  ) : (
+                    a.header
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         {error && (
           <p className="px-2 py-3 text-sm text-amber-600 dark:text-amber-400">
             Couldn&apos;t load arrivals — retrying…
