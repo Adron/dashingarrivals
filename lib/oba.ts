@@ -22,6 +22,7 @@ interface ObaStop {
 }
 
 interface ObaArrival {
+  routeId?: string;
   routeShortName?: string;
   routeLongName?: string;
   tripHeadsign?: string;
@@ -70,6 +71,7 @@ export async function fetchArrivals(stopId: string): Promise<StopArrivals> {
       const scheduledTime = a.scheduledArrivalTime ?? 0;
       const predicted = !!a.predicted && !!a.predictedArrivalTime;
       return {
+        routeId: a.routeId,
         routeShortName: a.routeShortName || a.routeLongName || "",
         headsign: a.tripHeadsign || "",
         predicted,
