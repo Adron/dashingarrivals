@@ -306,11 +306,21 @@ export default function MapView({ snapshot }: { snapshot: VehicleSnapshot | null
             "icon-rotation-alignment": "map",
             "icon-allow-overlap": true,
             "icon-ignore-placement": true,
-            // Base zoom ramp × per-type scale (trains larger than buses).
+            // Zoom ramp whose per-stop value is per-type (trains larger than
+            // buses). The zoom `interpolate` must stay top-level — MapLibre rejects
+            // a zoom expression nested inside another (e.g. `*`) — so the per-type
+            // `match` is the interpolate's OUTPUT at each stop (base × type factor:
+            // train 1.3, ferry 1.15, bus 0.85).
             "icon-size": [
-              "*",
-              ["interpolate", ["linear"], ["zoom"], 8, 0.5, 12, 0.8, 16, 1.1],
-              ["match", ["get", "type"], "train", 1.3, "ferry", 1.15, "bus", 0.85, 1],
+              "interpolate",
+              ["linear"],
+              ["zoom"],
+              8,
+              ["match", ["get", "type"], "train", 0.65, "ferry", 0.58, "bus", 0.43, 0.5],
+              12,
+              ["match", ["get", "type"], "train", 1.04, "ferry", 0.92, "bus", 0.68, 0.8],
+              16,
+              ["match", ["get", "type"], "train", 1.43, "ferry", 1.27, "bus", 0.94, 1.1],
             ],
           },
         });
