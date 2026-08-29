@@ -20,8 +20,11 @@ export const VEHICLE_ICON_PATHS: Record<VehicleType, IconPaths> = {
     detail: "M12.5 7.5 h7 a0.5 0.5 0 0 1 0.5 0.5 v2.5 h-8 v-2.5 a0.5 0.5 0 0 1 0.5 -0.5 z",
   },
   train: {
-    body: "M11 10 q5 -7 10 0 v14 a2 2 0 0 1 -2 2 h-6 a2 2 0 0 1 -2 -2 z",
-    detail: "M12.6 10 q3.4 -4 6.8 0 v2 h-6.8 z",
+    // Longer, sleeker light-rail car (Link LRV): rounded nose, raked windshield,
+    // and two window bands down the body.
+    body: "M11.6 7 Q11.6 2.6 16 2.6 Q20.4 2.6 20.4 7 L20.4 25 A2.4 2.4 0 0 1 18 27.4 L14 27.4 A2.4 2.4 0 0 1 11.6 25 Z",
+    detail:
+      "M13 8 Q16 5.5 19 8 L19 10.5 L13 10.5 Z M12.2 14 h7.6 v1.4 h-7.6 z M12.2 18.5 h7.6 v1.4 h-7.6 z",
   },
   ferry: {
     body: "M16 3 l7 9 l-1.5 13 a2 2 0 0 1 -2 2 h-7 a2 2 0 0 1 -2 -2 l-1.5 -13 z",

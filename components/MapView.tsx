@@ -306,7 +306,12 @@ export default function MapView({ snapshot }: { snapshot: VehicleSnapshot | null
             "icon-rotation-alignment": "map",
             "icon-allow-overlap": true,
             "icon-ignore-placement": true,
-            "icon-size": ["interpolate", ["linear"], ["zoom"], 8, 0.5, 12, 0.8, 16, 1.1],
+            // Base zoom ramp × per-type scale (trains larger than buses).
+            "icon-size": [
+              "*",
+              ["interpolate", ["linear"], ["zoom"], 8, 0.5, 12, 0.8, 16, 1.1],
+              ["match", ["get", "type"], "train", 1.3, "ferry", 1.15, "bus", 0.85, 1],
+            ],
           },
         });
       }
