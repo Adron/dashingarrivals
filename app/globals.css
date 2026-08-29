@@ -1,8 +1,18 @@
 @import "tailwindcss";
 
+/* Drive the `dark:` variant off a `.dark` class on <html> instead of the OS
+   media query, so the app can override the OS (light / dark / system toggle).
+   The "system" mode adds/removes `.dark` based on prefers-color-scheme. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
+}
+
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
 }
 
 @theme inline {
@@ -10,13 +20,6 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 html,

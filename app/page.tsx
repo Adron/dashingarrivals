@@ -7,11 +7,13 @@ import FilterControls from "@/components/FilterControls";
 import TopBar from "@/components/TopBar";
 import { useAlerts } from "@/components/useAlerts";
 import { useVehicleStream } from "@/components/useVehicleStream";
+import { useThemeInit } from "@/lib/theme";
 
 // MapLibre touches `window`, so load the map only on the client.
 const MapView = dynamic(() => import("@/components/MapView"), { ssr: false });
 
 export default function Home() {
+  useThemeInit();
   const { snapshot, error } = useVehicleStream();
   const alerts = useAlerts();
 

@@ -2,6 +2,7 @@
 
 // Header with title, live vehicle count, and freshness / source status.
 
+import ThemeToggle from "@/components/ThemeToggle";
 import type { VehicleSnapshot } from "@/lib/types";
 
 export default function TopBar({
@@ -37,6 +38,7 @@ export default function TopBar({
             </>
           )}
         </p>
+        <ThemeToggle />
       </div>
     </header>
   );

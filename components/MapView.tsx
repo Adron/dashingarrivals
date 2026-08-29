@@ -9,6 +9,7 @@ import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { clientConfig } from "@/lib/clientConfig";
 import { useFilters, useSelectedStop } from "@/lib/store";
+import { useTheme } from "@/lib/theme";
 import type { Stop, Vehicle, VehicleSnapshot, VehicleType } from "@/lib/types";
 
 const TYPE_COLORS: Record<VehicleType, string> = {
@@ -55,6 +56,12 @@ export default function MapView({ snapshot }: { snapshot: VehicleSnapshot | null
   const tweenStartRef = useRef(0);
   const settledRef = useRef(false);
 
+  // Currently-loaded basemap style URL, so the theme effect can skip redundant swaps.
+  const currentStyleRef = useRef("");
+
+  // Resolved theme ("light" | "dark") drives which basemap style is shown.
+  const resolved = useTheme((s) => s.resolved);
+
   // Filters mirrored into a ref for the render loop; kept in sync via effect.
   const { typeVisible, agencyVisible } = useFilters();
   const filtersRef = useRef({ typeVisible, agencyVisible });
@@ -67,9 +74,17 @@ export default function MapView({ snapshot }: { snapshot: VehicleSnapshot | null
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
+    // Match the theme the pre-paint script (app/layout.tsx) already applied, so
+    // the map loads in the right style instead of loading light then swapping.
+    const initialDark = document.documentElement.classList.contains("dark");
+    const initialStyle = initialDark
+      ? clientConfig.basemapStyleDark
+      : clientConfig.basemapStyleLight;
+    currentStyleRef.current = initialStyle;
+
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: clientConfig.basemapStyleUrl,
+      style: initialStyle,
       center: [-122.3321, 47.6062],
       zoom: 10,
       attributionControl: { compact: true },
@@ -172,21 +187,73 @@ export default function MapView({ snapshot }: { snapshot: VehicleSnapshot | null
       }
     };
 
-    map.on("load", () => {
+    // (Re)create our sources and layers. Runs on the first style load AND after
+    // every runtime style swap (setStyle wipes sources/layers), so it is guarded
+    // to be idempotent. Event handlers are bound once in the "load" handler below
+    // — they are delegated by layer id and survive a style swap.
+    const installLayers = () => {
       // Stops layer sits below vehicles so vehicles stay clickable on top.
-      map.addSource(STOP_SOURCE, { type: "geojson", data: EMPTY_FC });
-      map.addLayer({
-        id: STOP_LAYER,
-        type: "circle",
-        source: STOP_SOURCE,
-        minzoom: STOP_MIN_ZOOM,
-        paint: {
-          "circle-radius": ["interpolate", ["linear"], ["zoom"], 14, 3, 18, 6],
-          "circle-color": "#ffffff",
-          "circle-stroke-color": "#334155",
-          "circle-stroke-width": 2,
-        },
-      });
+      if (!map.getSource(STOP_SOURCE)) {
+        map.addSource(STOP_SOURCE, { type: "geojson", data: EMPTY_FC });
+      }
+      if (!map.getLayer(STOP_LAYER)) {
+        map.addLayer({
+          id: STOP_LAYER,
+          type: "circle",
+          source: STOP_SOURCE,
+          minzoom: STOP_MIN_ZOOM,
+          paint: {
+            "circle-radius": ["interpolate", ["linear"], ["zoom"], 14, 3, 18, 6],
+            "circle-color": "#ffffff",
+            "circle-stroke-color": "#334155",
+            "circle-stroke-width": 2,
+          },
+        });
+      }
+
+      if (!map.getSource(SOURCE_ID)) {
+        map.addSource(SOURCE_ID, {
+          type: "geojson",
+          data: { type: "FeatureCollection", features: [] },
+        });
+      }
+      if (!map.getLayer(LAYER_ID)) {
+        map.addLayer({
+          id: LAYER_ID,
+          type: "circle",
+          source: SOURCE_ID,
+          paint: {
+            "circle-radius": ["interpolate", ["linear"], ["zoom"], 8, 3, 12, 5, 16, 8],
+            "circle-color": [
+              "match",
+              ["get", "type"],
+              "bus",
+              TYPE_COLORS.bus,
+              "train",
+              TYPE_COLORS.train,
+              "ferry",
+              TYPE_COLORS.ferry,
+              "#666",
+            ],
+            "circle-stroke-width": 1.5,
+            "circle-stroke-color": "#ffffff",
+            "circle-opacity": 0.95,
+          },
+        });
+      }
+
+      // Repaint vehicles from the current tween targets, and (after a swap) refill
+      // stops for the current viewport. On the first load, stops load on moveend.
+      settledRef.current = false;
+      if (readyRef.current) loadStops();
+    };
+
+    // Add/refresh our layers on the initial style and after each theme swap.
+    map.on("style.load", installLayers);
+
+    map.on("load", () => {
+      // Bind interaction handlers once. Delegated by layer id, so they keep
+      // working after installLayers re-adds the layers on a style swap.
       map.on("click", STOP_LAYER, (e: maplibregl.MapLayerMouseEvent) => {
         const f = e.features?.[0];
         if (!f || f.geometry.type !== "Point") return;
@@ -212,33 +279,6 @@ export default function MapView({ snapshot }: { snapshot: VehicleSnapshot | null
       map.on("moveend", () => {
         clearTimeout(stopsTimer);
         stopsTimer = setTimeout(loadStops, 350);
-      });
-
-      map.addSource(SOURCE_ID, {
-        type: "geojson",
-        data: { type: "FeatureCollection", features: [] },
-      });
-      map.addLayer({
-        id: LAYER_ID,
-        type: "circle",
-        source: SOURCE_ID,
-        paint: {
-          "circle-radius": ["interpolate", ["linear"], ["zoom"], 8, 3, 12, 5, 16, 8],
-          "circle-color": [
-            "match",
-            ["get", "type"],
-            "bus",
-            TYPE_COLORS.bus,
-            "train",
-            TYPE_COLORS.train,
-            "ferry",
-            TYPE_COLORS.ferry,
-            "#666",
-          ],
-          "circle-stroke-width": 1.5,
-          "circle-stroke-color": "#ffffff",
-          "circle-opacity": 0.95,
-        },
       });
 
       map.on("click", LAYER_ID, (e: maplibregl.MapLayerMouseEvent) => {
@@ -291,6 +331,18 @@ export default function MapView({ snapshot }: { snapshot: VehicleSnapshot | null
     settledRef.current = false;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshot?.updatedAt]);
+
+  // Swap the basemap style when the resolved theme changes. installLayers (bound
+  // to "style.load") re-adds our sources/layers once the new style is ready.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const nextStyle =
+      resolved === "dark" ? clientConfig.basemapStyleDark : clientConfig.basemapStyleLight;
+    if (nextStyle === currentStyleRef.current) return;
+    currentStyleRef.current = nextStyle;
+    map.setStyle(nextStyle, { diff: false });
+  }, [resolved]);
 
   return <div ref={containerRef} className="h-full w-full" />;
 }
