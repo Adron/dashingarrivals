@@ -8,18 +8,16 @@ import { useEffect, useRef } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { clientConfig } from "@/lib/clientConfig";
+import { AGENCY_COLORS, agencyColor } from "@/lib/agencyColors";
+import { resolveBearing } from "@/lib/geo";
+import { buildIconId, getVehicleIcon, ICON_PIXEL_RATIO, parseIconId } from "@/lib/vehicleIcons";
 import { useFilters, useSelectedStop } from "@/lib/store";
 import { useTheme } from "@/lib/theme";
 import type { Stop, Vehicle, VehicleSnapshot, VehicleType } from "@/lib/types";
 
-const TYPE_COLORS: Record<VehicleType, string> = {
-  bus: "#2563eb",
-  train: "#dc2626",
-  ferry: "#0891b2",
-};
-
 const SOURCE_ID = "vehicles";
-const LAYER_ID = "vehicles-circle";
+const LAYER_ID = "vehicles-symbol";
+const ICON_TYPES: VehicleType[] = ["bus", "train", "ferry"];
 
 const STOP_SOURCE = "stops";
 const STOP_LAYER = "stops-circle";
@@ -31,16 +29,62 @@ interface Pos {
   lon: number;
 }
 
+const COMPASS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+/** Degrees (0 = north, clockwise) → 8-point compass label. */
+function compass(deg: number): string {
+  return COMPASS[Math.round((((deg % 360) + 360) % 360) / 45) % 8];
+}
+
+// Per-type label for the fleet/vehicle number row.
+const NUMBER_LABEL: Record<string, string> = { bus: "Bus #", train: "Train #", ferry: "Vessel" };
+
+const HTML_ESCAPES: Record<string, string> = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#39;",
+};
+/** Escape feed-sourced strings before interpolating into popup markup. */
+function esc(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => HTML_ESCAPES[c]);
+}
+
+function detailRow(label: string, value: string): string {
+  return `<div class="va-popup-row"><dt>${label}</dt><dd>${value}</dd></div>`;
+}
+
 function popupHTML(p: Record<string, unknown>): string {
-  const route = String(p.routeShortName || p.routeId || "—");
-  const agency = String(p.agencyName || p.agency || "");
   const type = String(p.type || "");
+  const route = esc(String(p.routeShortName || p.routeId || "—"));
+  const agency = esc(String(p.agencyName || p.agency || ""));
+  const color = agencyColor(String(p.agency || ""));
+  const number = p.vehicleNumber ? esc(String(p.vehicleNumber)) : "";
+
+  const bearing = p.bearing == null || p.bearing === "" ? null : Number(p.bearing);
+  const heading =
+    bearing == null || Number.isNaN(bearing) ? "" : `${compass(bearing)} · ${Math.round(bearing)}°`;
+
+  const speedVal = p.speed == null || p.speed === "" ? null : Number(p.speed);
+  const speed =
+    speedVal == null || Number.isNaN(speedVal) ? "" : `${Math.round(speedVal * 2.23694)} mph`;
+
   const updated = p.timestamp ? new Date(Number(p.timestamp)).toLocaleTimeString() : "—";
+
+  const rows: string[] = [];
+  if (number) rows.push(detailRow(NUMBER_LABEL[type] ?? "Vehicle", number));
+  if (heading) rows.push(detailRow("Heading", heading));
+  if (speed) rows.push(detailRow("Speed", speed));
+
   return `
-    <div style="font: 13px/1.4 system-ui, sans-serif; min-width: 160px;">
-      <div style="font-weight:600; font-size:14px;">Route ${route}</div>
-      <div style="color:#555; text-transform:capitalize;">${type} · ${agency}</div>
-      <div style="color:#888; margin-top:4px;">Updated ${updated}</div>
+    <div class="va-popup">
+      <div class="va-popup-title">
+        <span class="va-popup-dot" style="background:${color}"></span>
+        <span>Route ${route}</span>
+      </div>
+      <div class="va-popup-sub">${type ? esc(type) + " · " : ""}${agency}</div>
+      ${rows.length ? `<dl class="va-popup-rows">${rows.join("")}</dl>` : ""}
+      <div class="va-popup-updated">Updated ${updated}</div>
     </div>`;
 }
 
@@ -61,6 +105,11 @@ export default function MapView({ snapshot }: { snapshot: VehicleSnapshot | null
 
   // Resolved theme ("light" | "dark") drives which basemap style is shown.
   const resolved = useTheme((s) => s.resolved);
+
+  // Heading per vehicle (feed bearing, or derived from movement) for icon rotation.
+  const resolvedBearingRef = useRef<Map<string, number>>(new Map());
+  // Current icon theme, read by the styleimagemissing handler when it generates icons.
+  const currentThemeRef = useRef<"light" | "dark">(resolved);
 
   // Filters mirrored into a ref for the render loop; kept in sync via effect.
   const { typeVisible, agencyVisible } = useFilters();
@@ -133,7 +182,10 @@ export default function MapView({ snapshot }: { snapshot: VehicleSnapshot | null
                 type: target.type,
                 routeId: target.routeId ?? "",
                 routeShortName: target.routeShortName ?? "",
-                bearing: target.bearing ?? 0,
+                vehicleNumber: target.vehicleNumber ?? "",
+                bearing: resolvedBearingRef.current.get(id) ?? target.bearing ?? 0,
+                speed: target.speed ?? null,
+                icon: buildIconId(target.agency, target.type),
                 timestamp: target.timestamp,
               },
             });
@@ -187,6 +239,32 @@ export default function MapView({ snapshot }: { snapshot: VehicleSnapshot | null
       }
     };
 
+    // Generate + register a vehicle icon on demand. MapLibre asks for a missing
+    // icon via "styleimagemissing"; icons are cached by agency+type+theme, so this
+    // is cheap and also re-runs after a theme swap (setStyle drops all images).
+    const iconInFlight = new Set<string>();
+    const addMissingIcon = async (id: string) => {
+      if (!id.startsWith("veh-") || map.hasImage(id) || iconInFlight.has(id)) return;
+      const parsed = parseIconId(id);
+      if (!parsed) return;
+      iconInFlight.add(id);
+      try {
+        const data = await getVehicleIcon(parsed.agency, parsed.type, currentThemeRef.current);
+        if (!map.hasImage(id)) map.addImage(id, data, { pixelRatio: ICON_PIXEL_RATIO });
+      } catch {
+        // ignore; MapLibre re-asks on the next frame that needs it
+      } finally {
+        iconInFlight.delete(id);
+      }
+    };
+    // Pre-generate the icon set for a theme so the first paint doesn't flash.
+    const warmIcons = (theme: "light" | "dark") => {
+      for (const code of Object.keys(AGENCY_COLORS)) {
+        for (const type of ICON_TYPES) void getVehicleIcon(code, type, theme);
+      }
+    };
+    warmIcons(currentThemeRef.current);
+
     // (Re)create our sources and layers. Runs on the first style load AND after
     // every runtime style swap (setStyle wipes sources/layers), so it is guarded
     // to be idempotent. Event handlers are bound once in the "load" handler below
@@ -220,24 +298,15 @@ export default function MapView({ snapshot }: { snapshot: VehicleSnapshot | null
       if (!map.getLayer(LAYER_ID)) {
         map.addLayer({
           id: LAYER_ID,
-          type: "circle",
+          type: "symbol",
           source: SOURCE_ID,
-          paint: {
-            "circle-radius": ["interpolate", ["linear"], ["zoom"], 8, 3, 12, 5, 16, 8],
-            "circle-color": [
-              "match",
-              ["get", "type"],
-              "bus",
-              TYPE_COLORS.bus,
-              "train",
-              TYPE_COLORS.train,
-              "ferry",
-              TYPE_COLORS.ferry,
-              "#666",
-            ],
-            "circle-stroke-width": 1.5,
-            "circle-stroke-color": "#ffffff",
-            "circle-opacity": 0.95,
+          layout: {
+            "icon-image": ["get", "icon"], // e.g. "veh-KCM-bus"
+            "icon-rotate": ["get", "bearing"], // face direction of travel
+            "icon-rotation-alignment": "map",
+            "icon-allow-overlap": true,
+            "icon-ignore-placement": true,
+            "icon-size": ["interpolate", ["linear"], ["zoom"], 8, 0.5, 12, 0.8, 16, 1.1],
           },
         });
       }
@@ -254,6 +323,8 @@ export default function MapView({ snapshot }: { snapshot: VehicleSnapshot | null
     map.on("load", () => {
       // Bind interaction handlers once. Delegated by layer id, so they keep
       // working after installLayers re-adds the layers on a style swap.
+      map.on("styleimagemissing", (e) => void addMissingIcon(e.id));
+
       map.on("click", STOP_LAYER, (e: maplibregl.MapLayerMouseEvent) => {
         const f = e.features?.[0];
         if (!f || f.geometry.type !== "Point") return;
@@ -315,7 +386,21 @@ export default function MapView({ snapshot }: { snapshot: VehicleSnapshot | null
   useEffect(() => {
     if (!snapshot) return;
     const targets = new Map<string, Vehicle>();
-    for (const v of snapshot.vehicles) targets.set(v.id, v);
+    for (const v of snapshot.vehicles) {
+      targets.set(v.id, v);
+      // Resolve heading using the previous committed position (still in currentRef
+      // until the next line seeds new vehicles), so icons can face their direction.
+      const prev = currentRef.current.get(v.id);
+      resolvedBearingRef.current.set(
+        v.id,
+        resolveBearing(
+          v.bearing,
+          prev,
+          { lat: v.lat, lon: v.lon },
+          resolvedBearingRef.current.get(v.id),
+        ),
+      );
+    }
 
     for (const [id, v] of targets) {
       if (!currentRef.current.has(id)) {
@@ -323,7 +408,10 @@ export default function MapView({ snapshot }: { snapshot: VehicleSnapshot | null
       }
     }
     for (const id of [...currentRef.current.keys()]) {
-      if (!targets.has(id)) currentRef.current.delete(id);
+      if (!targets.has(id)) {
+        currentRef.current.delete(id);
+        resolvedBearingRef.current.delete(id);
+      }
     }
 
     targetsRef.current = targets;
@@ -335,6 +423,12 @@ export default function MapView({ snapshot }: { snapshot: VehicleSnapshot | null
   // Swap the basemap style when the resolved theme changes. installLayers (bound
   // to "style.load") re-adds our sources/layers once the new style is ready.
   useEffect(() => {
+    currentThemeRef.current = resolved;
+    // Warm this theme's icons so the (re)paint after a style swap doesn't flash.
+    for (const code of Object.keys(AGENCY_COLORS)) {
+      for (const type of ICON_TYPES) void getVehicleIcon(code, type, resolved);
+    }
+
     const map = mapRef.current;
     if (!map) return;
     const nextStyle =

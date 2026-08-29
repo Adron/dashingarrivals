@@ -13,6 +13,8 @@ export interface Vehicle {
   routeId?: string;
   /** Human-facing route label (falls back to routeId until the GTFS lookup lands). */
   routeShortName?: string;
+  /** Rider-facing fleet/vehicle number (GTFS-RT vehicle label or id; vessel name for ferries). */
+  vehicleNumber?: string;
   tripId?: string;
   lat: number;
   lon: number;

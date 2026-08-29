@@ -51,6 +51,7 @@ export async function fetchFerries(): Promise<Vehicle[]> {
       agencyName: "Washington State Ferries",
       type: "ferry",
       routeShortName: label,
+      vehicleNumber: v.VesselName,
       lat: v.Latitude as number,
       lon: v.Longitude as number,
       bearing: v.Heading,

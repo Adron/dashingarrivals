@@ -1,8 +1,11 @@
 "use client";
 
-// Floating panel to toggle vehicle types and agencies on the map.
+// Floating panel to toggle vehicle types and agencies on the map, doubling as the
+// legend: color = agency, shape = vehicle type.
 
+import { agencyColor } from "@/lib/agencyColors";
 import { FILTERABLE_AGENCIES, useFilters, VEHICLE_TYPES } from "@/lib/store";
+import { VEHICLE_ICON_PATHS } from "@/lib/vehicleIcons";
 import type { VehicleType } from "@/lib/types";
 
 const TYPE_LABELS: Record<VehicleType, string> = {
@@ -11,11 +14,17 @@ const TYPE_LABELS: Record<VehicleType, string> = {
   ferry: "Ferries",
 };
 
-const TYPE_DOT: Record<VehicleType, string> = {
-  bus: "bg-blue-600",
-  train: "bg-red-600",
-  ferry: "bg-cyan-600",
-};
+function TypeGlyph({ type }: { type: VehicleType }) {
+  return (
+    <svg
+      viewBox="0 0 32 32"
+      className="h-4 w-4 shrink-0 text-zinc-700 dark:text-zinc-200"
+      aria-hidden
+    >
+      <path d={VEHICLE_ICON_PATHS[type].body} fill="currentColor" />
+    </svg>
+  );
+}
 
 export default function FilterControls() {
   const { typeVisible, agencyVisible, setType, setAgency } = useFilters();
@@ -33,7 +42,7 @@ export default function FilterControls() {
               onChange={(e) => setType(t, e.target.checked)}
               className="accent-blue-600"
             />
-            <span className={`inline-block h-2.5 w-2.5 rounded-full ${TYPE_DOT[t]}`} />
+            <TypeGlyph type={t} />
             {TYPE_LABELS[t]}
           </label>
         ))}
@@ -51,12 +60,20 @@ export default function FilterControls() {
               onChange={(e) => setAgency(a.code, e.target.checked)}
               className="accent-blue-600"
             />
+            <span
+              className="inline-block h-3 w-3 shrink-0 rounded-sm border border-black/10 dark:border-white/20"
+              style={{ backgroundColor: agencyColor(a.code) }}
+            />
             <span className="truncate" title={a.name}>
               {a.name}
             </span>
           </label>
         ))}
       </div>
+
+      <p className="mt-2 border-t border-zinc-200 pt-2 text-[11px] leading-snug text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+        Color = agency · shape = type · icons face travel direction
+      </p>
     </div>
   );
 }
