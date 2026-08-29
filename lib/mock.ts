@@ -105,9 +105,14 @@ export function buildMockSnapshot(now: number = Date.now()): VehicleSnapshot {
       type: s.type,
       routeId: s.route,
       routeShortName: s.route,
+      // Fleet number = the seed id suffix (e.g. "M000"); gives the popup something
+      // realistic to show in dev. Ferries carry their vessel-style label instead.
+      vehicleNumber: s.id.split("_")[1] ?? s.id,
       lat,
       lon,
       bearing,
+      // Synthetic ground speed (m/s) so the details popup shows a plausible value.
+      speed: 4 + Math.abs(s.angularSpeed) * 220,
       timestamp: now,
     };
   });

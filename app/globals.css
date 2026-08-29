@@ -38,4 +38,86 @@ body {
 .maplibregl-popup-content {
   font-family: inherit;
   border-radius: 10px;
+  padding: 10px 28px 10px 12px;
+}
+
+/* Vehicle details popup */
+.va-popup {
+  font-size: 13px;
+  line-height: 1.45;
+  min-width: 172px;
+}
+.va-popup-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.va-popup-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex: none;
+}
+.va-popup-sub {
+  color: #64748b;
+  text-transform: capitalize;
+  margin-top: 1px;
+}
+.va-popup-rows {
+  margin: 8px 0 0;
+  display: grid;
+  gap: 3px;
+}
+.va-popup-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+.va-popup-row dt {
+  color: #64748b;
+}
+.va-popup-row dd {
+  margin: 0;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.va-popup-updated {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+/* Dark-theme popup: track the app's `.dark` class (set on <html>). */
+.dark .maplibregl-popup-content {
+  background: #18181b;
+  color: #e4e4e7;
+}
+.dark .maplibregl-popup-close-button {
+  color: #a1a1aa;
+}
+.dark .va-popup-sub,
+.dark .va-popup-row dt {
+  color: #a1a1aa;
+}
+.dark .va-popup-updated {
+  color: #8a8a94;
+}
+.dark .maplibregl-popup-anchor-top .maplibregl-popup-tip,
+.dark .maplibregl-popup-anchor-top-left .maplibregl-popup-tip,
+.dark .maplibregl-popup-anchor-top-right .maplibregl-popup-tip {
+  border-bottom-color: #18181b;
+}
+.dark .maplibregl-popup-anchor-bottom .maplibregl-popup-tip,
+.dark .maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip,
+.dark .maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip {
+  border-top-color: #18181b;
+}
+.dark .maplibregl-popup-anchor-left .maplibregl-popup-tip {
+  border-right-color: #18181b;
+}
+.dark .maplibregl-popup-anchor-right .maplibregl-popup-tip {
+  border-left-color: #18181b;
 }

@@ -6,6 +6,8 @@ import GtfsRealtimeBindings from "gtfs-realtime-bindings";
 /** A vehicle position as read straight from a GTFS-RT feed (pre-normalization). */
 export interface RawVehicle {
   vehicleId?: string;
+  /** Rider-facing fleet number from the feed (VehicleDescriptor.label), when provided. */
+  vehicleLabel?: string;
   routeId?: string;
   tripId?: string;
   lat: number;
@@ -27,7 +29,10 @@ export function decodeVehiclePositions(bytes: Uint8Array): RawVehicle[] {
     if (!v || !pos || pos.latitude == null || pos.longitude == null) continue;
 
     out.push({
-      vehicleId: v.vehicle?.id ?? entity.id ?? undefined,
+      // `||` collapses GTFS-RT's empty-string defaults to undefined so downstream
+      // fallbacks (entity.id, vehicle id) apply instead of yielding "".
+      vehicleId: v.vehicle?.id || entity.id || undefined,
+      vehicleLabel: v.vehicle?.label || undefined,
       routeId: v.trip?.routeId ?? undefined,
       tripId: v.trip?.tripId ?? undefined,
       lat: pos.latitude,

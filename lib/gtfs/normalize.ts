@@ -50,6 +50,11 @@ export function normalizeAgencyVehicles(
       type: route?.type ?? agency.defaultType,
       routeId: r.routeId,
       routeShortName: route?.shortName ?? r.routeId,
+      // Rider-facing fleet number. Uses the real feed label/id only — not the
+      // synthetic coordinate-based localId used for `id` when the feed omits both.
+      // `||` (not `??`): GTFS-RT string fields default to "" when unset, so an
+      // empty label must fall back to the vehicle id.
+      vehicleNumber: r.vehicleLabel || r.vehicleId,
       tripId: r.tripId,
       lat: r.lat,
       lon: r.lon,
