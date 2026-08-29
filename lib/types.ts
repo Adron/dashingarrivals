@@ -40,8 +40,6 @@ export interface VehicleSnapshot {
   /** Epoch milliseconds the snapshot was built. */
   updatedAt: number;
   sources: SourceStatus[];
-  /** True when the snapshot is synthetic mock data (dev / fallback). */
-  mock?: boolean;
 }
 
 /** A transit stop (from OneBusAway stops-for-location). */

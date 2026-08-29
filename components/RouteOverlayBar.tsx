@@ -6,7 +6,7 @@
 import { useSelectedRoute } from "@/lib/store";
 
 export default function RouteOverlayBar() {
-  const { selectedRoute, setSelectedRoute } = useSelectedRoute();
+  const { selectedRoute, routeError, setSelectedRoute } = useSelectedRoute();
   if (!selectedRoute) return null;
 
   return (
@@ -18,6 +18,11 @@ export default function RouteOverlayBar() {
         />
         <span>
           Route <span className="font-semibold">{selectedRoute.shortName}</span>
+          {routeError ? (
+            <span className="ml-1.5 text-xs font-normal text-amber-600 dark:text-amber-400">
+              · shape unavailable
+            </span>
+          ) : null}
         </span>
         <button
           type="button"
