@@ -34,7 +34,6 @@ export default function TopBar({
                 {count.toLocaleString()}
               </span>{" "}
               vehicles · updated {updated}
-              {snapshot?.mock ? " · demo data" : ""}
             </>
           )}
         </p>

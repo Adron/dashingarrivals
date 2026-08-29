@@ -40,14 +40,22 @@ export async function GET(req: Request) {
     return NextResponse.json(hit.data, { headers });
   }
 
-  try {
-    const shape = await fetchRouteShape(obaRouteId);
-    cache.set(obaRouteId, { data: shape, expires: now + TTL_MS });
-    return NextResponse.json(shape, { headers });
-  } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : String(err) },
-      { status: 502 },
-    );
+  // The shared "TEST" OBA key can rate-limit (429); one short retry smooths over
+  // transient limits without hammering upstream.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const shape = await fetchRouteShape(obaRouteId);
+      cache.set(obaRouteId, { data: shape, expires: now + TTL_MS });
+      return NextResponse.json(shape, { headers });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (attempt === 0 && msg.includes("429")) {
+        await new Promise((r) => setTimeout(r, 700));
+        continue;
+      }
+      return NextResponse.json({ error: msg }, { status: 502 });
+    }
   }
+  // Unreachable (the loop always returns), but satisfies the return type.
+  return NextResponse.json({ error: "route shape unavailable" }, { status: 502 });
 }

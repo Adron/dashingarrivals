@@ -586,16 +586,21 @@ export default function MapView({ snapshot }: { snapshot: VehicleSnapshot | null
     }
 
     let cancelled = false;
+    const fail = () => {
+      if (!cancelled) useSelectedRoute.getState().setRouteError(true);
+    };
     (async () => {
       try {
         const res = await fetch(
           `/api/routes/shape?agency=${encodeURIComponent(selectedRoute.agency)}` +
             `&routeId=${encodeURIComponent(selectedRoute.routeId)}`,
         );
-        if (!res.ok || cancelled) return;
+        if (cancelled) return;
+        if (!res.ok) return fail();
         const shape = (await res.json()) as { path?: GeoJSON.MultiLineString; stops?: Stop[] };
         const m = mapRef.current;
-        if (cancelled || !m || !shape.path) return;
+        if (cancelled) return;
+        if (!m || !shape.path || shape.path.coordinates.length === 0) return fail();
 
         const color = selectedRoute.color;
         const line: GeoJSON.Feature = {
@@ -627,7 +632,7 @@ export default function MapView({ snapshot }: { snapshot: VehicleSnapshot | null
           m.fitBounds(bounds, { padding: 64, maxZoom: 15, duration: 600 });
         }
       } catch {
-        // ignore; the overlay just doesn't appear
+        fail();
       }
     })();
 

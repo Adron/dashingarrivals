@@ -7,12 +7,9 @@ import { fetchVehiclePositions } from "@/lib/gtfs/decode";
 import { normalizeAgencyVehicles } from "@/lib/gtfs/normalize";
 import { routesForAgency } from "@/lib/routesLookup";
 import { fetchFerries } from "@/lib/wsf";
-import { buildMockSnapshot } from "@/lib/mock";
 import type { SourceStatus, Vehicle, VehicleSnapshot } from "@/lib/types";
 
 export async function buildSnapshot(): Promise<VehicleSnapshot> {
-  if (config.useMock) return buildMockSnapshot();
-
   const sources: SourceStatus[] = [];
   const vehicles: Vehicle[] = [];
 
@@ -52,12 +49,7 @@ export async function buildSnapshot(): Promise<VehicleSnapshot> {
 
   await Promise.all([...agencyTasks, ferryTask]);
 
-  // If every source failed (bad key, network), keep the map alive with mock data
-  // in dev rather than showing an empty map.
-  if (vehicles.length === 0 && config.mockFallback) {
-    const mock = buildMockSnapshot();
-    return { ...mock, sources: [...sources, ...mock.sources] };
-  }
-
+  // If every source failed (bad key, network), the snapshot is empty and `sources`
+  // carries the per-agency errors for the UI to surface.
   return { vehicles, updatedAt: Date.now(), sources };
 }

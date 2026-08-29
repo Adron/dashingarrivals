@@ -52,10 +52,16 @@ export interface SelectedRoute {
 
 interface SelectedRouteState {
   selectedRoute: SelectedRoute | null;
+  /** True when the route's shape couldn't be loaded (e.g. upstream 429/404). */
+  routeError: boolean;
   setSelectedRoute: (route: SelectedRoute | null) => void;
+  setRouteError: (error: boolean) => void;
 }
 
 export const useSelectedRoute = create<SelectedRouteState>((set) => ({
   selectedRoute: null,
-  setSelectedRoute: (route) => set({ selectedRoute: route }),
+  routeError: false,
+  // Selecting (or clearing) a route resets any prior error.
+  setSelectedRoute: (route) => set({ selectedRoute: route, routeError: false }),
+  setRouteError: (error) => set({ routeError: error }),
 }));
