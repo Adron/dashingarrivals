@@ -66,6 +66,34 @@ body {
   text-transform: capitalize;
   margin-top: 1px;
 }
+/* Clickable route title (overlays the route on the map). */
+.va-popup-route-link {
+  font: inherit;
+  font-weight: 600;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  text-align: left;
+}
+.va-popup-route-link:hover {
+  text-decoration: underline;
+}
+.va-popup-route-cta {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #2563eb;
+  text-decoration: none;
+}
+.dark .va-popup-route-cta {
+  color: #93c5fd;
+}
 .va-popup-rows {
   margin: 8px 0 0;
   display: grid;

@@ -37,3 +37,25 @@ export const useSelectedStop = create<SelectedStopState>((set) => ({
   selectedStop: null,
   setSelectedStop: (stop) => set({ selectedStop: stop }),
 }));
+
+/** A route selected from a vehicle popup, whose shape overlays the map. */
+export interface SelectedRoute {
+  /** Agency code (e.g. "KCM"). */
+  agency: string;
+  /** GTFS-RT route id, unprefixed (e.g. "100001"). */
+  routeId: string;
+  /** Display label (route short name). */
+  shortName: string;
+  /** Overlay color (agency color). */
+  color: string;
+}
+
+interface SelectedRouteState {
+  selectedRoute: SelectedRoute | null;
+  setSelectedRoute: (route: SelectedRoute | null) => void;
+}
+
+export const useSelectedRoute = create<SelectedRouteState>((set) => ({
+  selectedRoute: null,
+  setSelectedRoute: (route) => set({ selectedRoute: route }),
+}));

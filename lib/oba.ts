@@ -2,6 +2,7 @@
 // Server-side only.
 
 import { config } from "@/lib/config";
+import { decodePolyline } from "@/lib/polyline";
 import type { Arrival, Stop, StopArrivals } from "@/lib/types";
 
 function obaUrl(path: string, params: Record<string, string | number> = {}): string {
@@ -30,6 +31,23 @@ interface ObaArrival {
   predictedArrivalTime?: number;
   scheduledArrivalTime?: number;
   status?: string;
+}
+
+interface ObaRouteRef {
+  id: string;
+  shortName?: string;
+  longName?: string;
+  color?: string;
+}
+
+/** A route's full geometry (all direction patterns) plus its stops. */
+export interface RouteShape {
+  routeId: string;
+  shortName?: string;
+  /** GTFS route color as a hex string (with leading #), if the feed provides one. */
+  color?: string;
+  path: GeoJSON.MultiLineString;
+  stops: Stop[];
 }
 
 /** Stops within a bounding box (center + spans), for the current map viewport. */
@@ -84,4 +102,50 @@ export async function fetchArrivals(stopId: string): Promise<StopArrivals> {
     .sort((a, b) => a.arrivalTime - b.arrivalTime);
 
   return { stopName: stop?.name, stopCode: stop?.code, arrivals };
+}
+
+/**
+ * Full shape + stops for a route (OBA route id, e.g. "1_100001"). The response's
+ * polylines cover every direction/pattern; they're decoded into one
+ * MultiLineString. Stops come from the entry's stopIds resolved via references.
+ */
+export async function fetchRouteShape(routeId: string): Promise<RouteShape> {
+  const path = `stops-for-route/${encodeURIComponent(routeId)}.json`;
+  const res = await fetch(obaUrl(path, { includePolylines: "true" }), { cache: "no-store" });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const json = await res.json();
+
+  const entry = json?.data?.entry ?? {};
+  const polylines: { points?: string }[] = entry.polylines ?? [];
+  const coordinates = polylines
+    .map((p) => (p.points ? decodePolyline(p.points) : []))
+    .filter((line) => line.length > 1);
+
+  const refStops: ObaStop[] = json?.data?.references?.stops ?? [];
+  const byId = new Map(refStops.map((s) => [s.id, s]));
+  const stopIds: string[] = entry.stopIds ?? [];
+  const stops: Stop[] = stopIds
+    .map((id) => byId.get(id))
+    .filter((s): s is ObaStop => !!s)
+    .map((s) => ({
+      id: s.id,
+      code: s.code ?? "",
+      name: s.name ?? "",
+      lat: s.lat,
+      lon: s.lon,
+      direction: s.direction || undefined,
+      routeIds: s.routeIds ?? [],
+    }));
+
+  const routeRef: ObaRouteRef | undefined = (json?.data?.references?.routes ?? []).find(
+    (r: ObaRouteRef) => r.id === routeId,
+  );
+
+  return {
+    routeId,
+    shortName: routeRef?.shortName || routeRef?.longName,
+    color: routeRef?.color ? `#${routeRef.color}` : undefined,
+    path: { type: "MultiLineString", coordinates },
+    stops,
+  };
 }
