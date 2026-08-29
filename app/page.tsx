@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import AlertsBar from "@/components/AlertsBar";
 import ArrivalsPanel from "@/components/ArrivalsPanel";
 import FilterControls from "@/components/FilterControls";
+import RouteOverlayBar from "@/components/RouteOverlayBar";
 import TopBar from "@/components/TopBar";
 import { useAlerts } from "@/components/useAlerts";
 import { useVehicleStream } from "@/components/useVehicleStream";
@@ -22,6 +23,7 @@ export default function Home() {
       <MapView snapshot={snapshot} />
       <TopBar snapshot={snapshot} error={error} />
       <AlertsBar alerts={alerts} />
+      <RouteOverlayBar />
       <FilterControls />
       <ArrivalsPanel alerts={alerts} />
     </main>

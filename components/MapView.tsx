@@ -11,7 +11,7 @@ import { clientConfig } from "@/lib/clientConfig";
 import { AGENCY_COLORS, agencyColor } from "@/lib/agencyColors";
 import { resolveBearing } from "@/lib/geo";
 import { buildIconId, getVehicleIcon, ICON_PIXEL_RATIO, parseIconId } from "@/lib/vehicleIcons";
-import { useFilters, useSelectedStop } from "@/lib/store";
+import { useFilters, useSelectedRoute, useSelectedStop } from "@/lib/store";
 import { useTheme } from "@/lib/theme";
 import type { Stop, Vehicle, VehicleSnapshot, VehicleType } from "@/lib/types";
 
@@ -22,6 +22,14 @@ const ICON_TYPES: VehicleType[] = ["bus", "train", "ferry"];
 const STOP_SOURCE = "stops";
 const STOP_LAYER = "stops-circle";
 const STOP_MIN_ZOOM = 14; // only show stops when zoomed in
+
+// Route overlay: the clicked route's shape (line + casing) and its stops.
+const ROUTE_SOURCE = "route-shape";
+const ROUTE_CASING_LAYER = "route-shape-casing";
+const ROUTE_LINE_LAYER = "route-shape-line";
+const ROUTE_STOP_SOURCE = "route-stops";
+const ROUTE_STOP_LAYER = "route-stops-circle";
+
 const EMPTY_FC: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
 
 interface Pos {
@@ -58,8 +66,16 @@ function popupHTML(p: Record<string, unknown>): string {
   const type = String(p.type || "");
   const route = esc(String(p.routeShortName || p.routeId || "—"));
   const agency = esc(String(p.agencyName || p.agency || ""));
-  const color = agencyColor(String(p.agency || ""));
+  const agencyCode = String(p.agency || "");
+  const color = agencyColor(agencyCode);
   const number = p.vehicleNumber ? esc(String(p.vehicleNumber)) : "";
+
+  // The route is clickable (overlays its shape) only when we have a route id and
+  // the agency has OneBusAway route data — i.e. not the WSF ferry feed.
+  const routeClickable = !!String(p.routeId || "") && agencyCode !== "WSF";
+  const routeTitle = routeClickable
+    ? `<button type="button" class="va-popup-route-link">Route ${route}<span class="va-popup-route-cta">Show route ▸</span></button>`
+    : `<span>Route ${route}</span>`;
 
   const bearing = p.bearing == null || p.bearing === "" ? null : Number(p.bearing);
   const heading =
@@ -80,7 +96,7 @@ function popupHTML(p: Record<string, unknown>): string {
     <div class="va-popup">
       <div class="va-popup-title">
         <span class="va-popup-dot" style="background:${color}"></span>
-        <span>Route ${route}</span>
+        ${routeTitle}
       </div>
       <div class="va-popup-sub">${type ? esc(type) + " · " : ""}${agency}</div>
       ${rows.length ? `<dl class="va-popup-rows">${rows.join("")}</dl>` : ""}
@@ -110,6 +126,13 @@ export default function MapView({ snapshot }: { snapshot: VehicleSnapshot | null
   const resolvedBearingRef = useRef<Map<string, number>>(new Map());
   // Current icon theme, read by the styleimagemissing handler when it generates icons.
   const currentThemeRef = useRef<"light" | "dark">(resolved);
+
+  // Current route overlay (line + stops), kept in a ref so installLayers can
+  // re-apply it after a basemap/theme swap wipes the sources.
+  const routeShapeRef = useRef<{ line: GeoJSON.Feature; stops: GeoJSON.FeatureCollection } | null>(
+    null,
+  );
+  const selectedRoute = useSelectedRoute((s) => s.selectedRoute);
 
   // Filters mirrored into a ref for the render loop; kept in sync via effect.
   const { typeVisible, agencyVisible } = useFilters();
@@ -239,6 +262,22 @@ export default function MapView({ snapshot }: { snapshot: VehicleSnapshot | null
       }
     };
 
+    // Open the arrivals panel for a clicked stop feature (viewport or route stop).
+    const selectStopFeature = (f: maplibregl.MapGeoJSONFeature) => {
+      if (f.geometry.type !== "Point") return;
+      const p = f.properties ?? {};
+      const [lon, lat] = f.geometry.coordinates as [number, number];
+      useSelectedStop.getState().setSelectedStop({
+        id: String(p.id),
+        code: String(p.code ?? ""),
+        name: String(p.name ?? ""),
+        lat,
+        lon,
+        direction: p.direction ? String(p.direction) : undefined,
+        routeIds: [],
+      });
+    };
+
     // Generate + register a vehicle icon on demand. MapLibre asks for a missing
     // icon via "styleimagemissing"; icons are cached by agency+type+theme, so this
     // is cheap and also re-runs after a theme swap (setStyle drops all images).
@@ -326,6 +365,76 @@ export default function MapView({ snapshot }: { snapshot: VehicleSnapshot | null
         });
       }
 
+      // Route overlay: casing + line + stops, inserted BELOW the viewport-stops
+      // layer (and thus below vehicles) so those stay on top and clickable. Order
+      // of insertion → stacking: casing, line, route-stops, stops, vehicles.
+      const beforeStops = map.getLayer(STOP_LAYER) ? STOP_LAYER : undefined;
+      const isDark = currentThemeRef.current === "dark";
+      if (!map.getSource(ROUTE_SOURCE)) {
+        map.addSource(ROUTE_SOURCE, { type: "geojson", data: EMPTY_FC });
+      }
+      if (!map.getLayer(ROUTE_CASING_LAYER)) {
+        map.addLayer(
+          {
+            id: ROUTE_CASING_LAYER,
+            type: "line",
+            source: ROUTE_SOURCE,
+            layout: { "line-join": "round", "line-cap": "round" },
+            paint: {
+              "line-color": isDark ? "#000000" : "#ffffff",
+              "line-opacity": 0.7,
+              "line-width": ["interpolate", ["linear"], ["zoom"], 8, 5, 14, 9, 18, 13],
+            },
+          },
+          beforeStops,
+        );
+      }
+      if (!map.getLayer(ROUTE_LINE_LAYER)) {
+        map.addLayer(
+          {
+            id: ROUTE_LINE_LAYER,
+            type: "line",
+            source: ROUTE_SOURCE,
+            layout: { "line-join": "round", "line-cap": "round" },
+            paint: {
+              "line-color": ["coalesce", ["get", "color"], "#2563eb"],
+              "line-width": ["interpolate", ["linear"], ["zoom"], 8, 2.5, 14, 5, 18, 7],
+            },
+          },
+          beforeStops,
+        );
+      }
+      if (!map.getSource(ROUTE_STOP_SOURCE)) {
+        map.addSource(ROUTE_STOP_SOURCE, { type: "geojson", data: EMPTY_FC });
+      }
+      if (!map.getLayer(ROUTE_STOP_LAYER)) {
+        map.addLayer(
+          {
+            id: ROUTE_STOP_LAYER,
+            type: "circle",
+            source: ROUTE_STOP_SOURCE,
+            paint: {
+              "circle-radius": ["interpolate", ["linear"], ["zoom"], 9, 2.5, 14, 5, 18, 7],
+              "circle-color": isDark ? "#18181b" : "#ffffff",
+              "circle-stroke-color": ["coalesce", ["get", "color"], "#2563eb"],
+              "circle-stroke-width": 2,
+            },
+          },
+          beforeStops,
+        );
+      }
+
+      // Re-apply the active route overlay after a style swap wiped the sources.
+      if (routeShapeRef.current) {
+        (map.getSource(ROUTE_SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData({
+          type: "FeatureCollection",
+          features: [routeShapeRef.current.line],
+        });
+        (map.getSource(ROUTE_STOP_SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(
+          routeShapeRef.current.stops,
+        );
+      }
+
       // Repaint vehicles from the current tween targets, and (after a swap) refill
       // stops for the current viewport. On the first load, stops load on moveend.
       settledRef.current = false;
@@ -340,27 +449,25 @@ export default function MapView({ snapshot }: { snapshot: VehicleSnapshot | null
       // working after installLayers re-adds the layers on a style swap.
       map.on("styleimagemissing", (e) => void addMissingIcon(e.id));
 
-      map.on("click", STOP_LAYER, (e: maplibregl.MapLayerMouseEvent) => {
+      const onStopClick = (e: maplibregl.MapLayerMouseEvent) => {
         const f = e.features?.[0];
-        if (!f || f.geometry.type !== "Point") return;
-        const p = f.properties ?? {};
-        const [lon, lat] = f.geometry.coordinates as [number, number];
-        useSelectedStop.getState().setSelectedStop({
-          id: String(p.id),
-          code: String(p.code ?? ""),
-          name: String(p.name ?? ""),
-          lat,
-          lon,
-          direction: p.direction ? String(p.direction) : undefined,
-          routeIds: [],
-        });
-      });
-      map.on("mouseenter", STOP_LAYER, () => {
+        if (f) selectStopFeature(f);
+      };
+      const setPointer = () => {
         map.getCanvas().style.cursor = "pointer";
-      });
-      map.on("mouseleave", STOP_LAYER, () => {
+      };
+      const clearPointer = () => {
         map.getCanvas().style.cursor = "";
-      });
+      };
+
+      map.on("click", STOP_LAYER, onStopClick);
+      map.on("mouseenter", STOP_LAYER, setPointer);
+      map.on("mouseleave", STOP_LAYER, clearPointer);
+
+      // Route-overlay stops behave exactly like viewport stops (open arrivals).
+      map.on("click", ROUTE_STOP_LAYER, onStopClick);
+      map.on("mouseenter", ROUTE_STOP_LAYER, setPointer);
+      map.on("mouseleave", ROUTE_STOP_LAYER, clearPointer);
 
       map.on("moveend", () => {
         clearTimeout(stopsTimer);
@@ -370,10 +477,22 @@ export default function MapView({ snapshot }: { snapshot: VehicleSnapshot | null
       map.on("click", LAYER_ID, (e: maplibregl.MapLayerMouseEvent) => {
         const f = e.features?.[0];
         if (!f || f.geometry.type !== "Point") return;
-        new maplibregl.Popup({ closeButton: true, offset: 8 })
+        const props = f.properties ?? {};
+        const popup = new maplibregl.Popup({ closeButton: true, offset: 8 })
           .setLngLat(f.geometry.coordinates as [number, number])
-          .setHTML(popupHTML(f.properties ?? {}))
+          .setHTML(popupHTML(props))
           .addTo(map);
+        // Clicking the route title overlays that route's shape + stops.
+        const link = popup.getElement()?.querySelector(".va-popup-route-link");
+        link?.addEventListener("click", () => {
+          useSelectedRoute.getState().setSelectedRoute({
+            agency: String(props.agency ?? ""),
+            routeId: String(props.routeId ?? ""),
+            shortName: String(props.routeShortName || props.routeId || ""),
+            color: agencyColor(String(props.agency ?? "")),
+          });
+          popup.remove();
+        });
       });
       map.on("mouseenter", LAYER_ID, () => {
         map.getCanvas().style.cursor = "pointer";
@@ -452,6 +571,70 @@ export default function MapView({ snapshot }: { snapshot: VehicleSnapshot | null
     currentStyleRef.current = nextStyle;
     map.setStyle(nextStyle, { diff: false });
   }, [resolved]);
+
+  // Fetch + render the selected route's shape and stops, then fit the map to it.
+  // Deselecting empties the overlay sources.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (!selectedRoute) {
+      routeShapeRef.current = null;
+      (map.getSource(ROUTE_SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(EMPTY_FC);
+      (map.getSource(ROUTE_STOP_SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(EMPTY_FC);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/routes/shape?agency=${encodeURIComponent(selectedRoute.agency)}` +
+            `&routeId=${encodeURIComponent(selectedRoute.routeId)}`,
+        );
+        if (!res.ok || cancelled) return;
+        const shape = (await res.json()) as { path?: GeoJSON.MultiLineString; stops?: Stop[] };
+        const m = mapRef.current;
+        if (cancelled || !m || !shape.path) return;
+
+        const color = selectedRoute.color;
+        const line: GeoJSON.Feature = {
+          type: "Feature",
+          geometry: shape.path,
+          properties: { color },
+        };
+        const stops: GeoJSON.FeatureCollection = {
+          type: "FeatureCollection",
+          features: (shape.stops ?? []).map((s) => ({
+            type: "Feature",
+            geometry: { type: "Point", coordinates: [s.lon, s.lat] },
+            properties: { id: s.id, code: s.code, name: s.name, direction: s.direction ?? "", color },
+          })),
+        };
+        routeShapeRef.current = { line, stops };
+
+        (m.getSource(ROUTE_SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData({
+          type: "FeatureCollection",
+          features: [line],
+        });
+        (m.getSource(ROUTE_STOP_SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(stops);
+
+        const bounds = new maplibregl.LngLatBounds();
+        for (const seg of shape.path.coordinates) {
+          for (const c of seg) bounds.extend(c as [number, number]);
+        }
+        if (!bounds.isEmpty()) {
+          m.fitBounds(bounds, { padding: 64, maxZoom: 15, duration: 600 });
+        }
+      } catch {
+        // ignore; the overlay just doesn't appear
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedRoute]);
 
   return <div ref={containerRef} className="h-full w-full" />;
 }
