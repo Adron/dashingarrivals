@@ -18,6 +18,10 @@ export const config = {
   /** How long a built snapshot is considered fresh, in ms. */
   cacheTtlMs: Number(process.env.CACHE_TTL_MS ?? "5000"),
 
+  /** WSDOT ferries vessel-locations API. Access code is optional (currently open). */
+  wsfBaseUrl: process.env.WSF_BASE_URL ?? "https://www.wsdot.wa.gov/ferries/api/vessels/rest",
+  wsdotAccessCode: process.env.WSDOT_API_ACCESS_CODE ?? "",
+
   /**
    * Upstash Redis (Vercel Marketplace). Accepts either the KV_* names or
    * Upstash's native UPSTASH_REDIS_REST_* names. Blank => in-process cache only.

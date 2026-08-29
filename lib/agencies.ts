@@ -20,17 +20,17 @@ export interface AgencyConfig {
 }
 
 export const AGENCIES: AgencyConfig[] = [
-  // v1
   { code: "KCM", name: "King County Metro", obaId: "1", defaultType: "bus", enabled: true },
   // Sound Transit's realtime feed is mostly ST Express (bus) + Sounder; Link
   // light-rail positions are partial. Default to bus; the routes lookup upgrades
   // Sounder/Link to "train".
   { code: "ST", name: "Sound Transit", obaId: "40", defaultType: "bus", enabled: true },
+  { code: "CT", name: "Community Transit", obaId: "29", defaultType: "bus", enabled: true },
+  { code: "PT", name: "Pierce Transit", obaId: "3", defaultType: "bus", enabled: true },
+  { code: "KT", name: "Kitsap Transit", obaId: "20", defaultType: "bus", enabled: true },
+  { code: "ET", name: "Everett Transit", obaId: "97", defaultType: "bus", enabled: true },
 
-  // Phase 4 (disabled until we expand)
-  { code: "PT", name: "Pierce Transit", obaId: "3", defaultType: "bus", enabled: false },
-  { code: "KT", name: "Kitsap Transit", obaId: "20", defaultType: "bus", enabled: false },
-  { code: "ET", name: "Everett Transit", obaId: "97", defaultType: "bus", enabled: false },
+  // Not yet enabled (Olympia area).
   { code: "IT", name: "Intercity Transit", obaId: "19", defaultType: "bus", enabled: false },
 ];
 
