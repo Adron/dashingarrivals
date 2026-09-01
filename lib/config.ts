@@ -16,9 +16,20 @@ export const config = {
   wsdotAccessCode: process.env.WSDOT_API_ACCESS_CODE ?? "",
 
   /**
-   * Upstash Redis (Vercel Marketplace). Accepts either the KV_* names or
-   * Upstash's native UPSTASH_REDIS_REST_* names. Blank => in-process cache only.
+   * Upstash Redis (Vercel Marketplace). Accepts the standard KV_* names, the
+   * native UPSTASH_REDIS_REST_* names, and the `dashingarrivals_`-prefixed names
+   * that the Marketplace connection injects (Vercel prefixes the store's vars
+   * with the store name when an un-prefixed KV_REST_API_* var already exists on
+   * the project). Blank => in-process cache only.
    */
-  kvUrl: process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL || "",
-  kvToken: process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN || "",
+  kvUrl:
+    process.env.KV_REST_API_URL ||
+    process.env.UPSTASH_REDIS_REST_URL ||
+    process.env.dashingarrivals_KV_REST_API_URL ||
+    "",
+  kvToken:
+    process.env.KV_REST_API_TOKEN ||
+    process.env.UPSTASH_REDIS_REST_TOKEN ||
+    process.env.dashingarrivals_KV_REST_API_TOKEN ||
+    "",
 };
