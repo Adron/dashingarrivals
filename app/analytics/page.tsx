@@ -138,6 +138,8 @@ function Dashboard({ stats }: { stats: AnalyticsStats }) {
   const { totals } = stats;
   return (
     <div className="mt-6 space-y-6">
+      {stats.backend === "memory" ? <MemoryWarning /> : null}
+
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Metric label="Pageviews" value={totals.pageviews} />
         <Metric label="Unique visitors" value={totals.uniqueVisitors} />
@@ -149,15 +151,39 @@ function Dashboard({ stats }: { stats: AnalyticsStats }) {
         <TrafficChart series={stats.series} />
       </Card>
 
+      <SectionLabel>Popular transit</SectionLabel>
       <div className="grid gap-6 lg:grid-cols-2">
+        <Card title="Top routes">
+          <BarList items={stats.topRoutes} empty="No route clicks yet." />
+        </Card>
+        <Card title="Top vehicles">
+          <BarList items={stats.topVehicles} empty="No vehicle clicks yet." />
+        </Card>
+      </div>
+
+      <SectionLabel>Where traffic comes from</SectionLabel>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card title="Referrers">
+          <BarList items={stats.referrers} empty="No referrers yet." />
+        </Card>
+        <Card title="Campaign sources (UTM)">
+          <BarList items={stats.campaigns} empty="No campaign traffic yet." />
+        </Card>
+        <Card title="Countries">
+          <BarList
+            items={stats.countries}
+            empty="No country data (production only)."
+          />
+        </Card>
+      </div>
+
+      <SectionLabel>Engagement</SectionLabel>
+      <div className="grid gap-6 lg:grid-cols-3">
         <Card title="Top pages">
           <BarList items={stats.topPages} empty="No pageviews yet." />
         </Card>
-        <Card title="Most clicked">
+        <Card title="Most clicked (UI)">
           <BarList items={stats.topClicks} empty="No clicks yet." />
-        </Card>
-        <Card title="Referrers">
-          <BarList items={stats.referrers} empty="No referrers yet." />
         </Card>
         <Card title="Devices">
           <BarList items={stats.devices} empty="No data yet." />
@@ -192,6 +218,31 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
       </h2>
       {children}
     </section>
+  );
+}
+
+function MemoryWarning() {
+  return (
+    <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
+      <p className="font-semibold">Numbers may look inconsistent between refreshes.</p>
+      <p className="mt-1">
+        Analytics is using an <strong>ephemeral in-memory store</strong> because
+        no shared Redis is configured. Each serverless instance keeps its own
+        counts, so totals and lists can jump around as refreshes land on
+        different instances. Configure Upstash Redis (the <code>KV_REST_API_URL</code>
+        {" / "}
+        <code>KV_REST_API_TOKEN</code> env vars) for consistent, shared, durable
+        data.
+      </p>
+    </div>
+  );
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="pt-2 text-xs font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
+      {children}
+    </h2>
   );
 }
 
@@ -259,35 +310,60 @@ function RecentFeed({ stats }: { stats: AnalyticsStats }) {
   }
   return (
     <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
-      {stats.recent.map((ev, i) => (
-        <li
-          key={`${ev.ts}-${i}`}
-          className="flex items-center justify-between gap-3 py-2 text-sm"
-        >
-          <span className="flex min-w-0 items-center gap-2">
+      {stats.recent.map((ev, i) => {
+        const b = badge(ev);
+        return (
+          <li
+            key={`${ev.ts}-${i}`}
+            className="flex items-center justify-between gap-3 py-2 text-sm"
+          >
+            <span className="flex min-w-0 items-center gap-2">
+              <span
+                className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium uppercase ${b.cls}`}
+              >
+                {b.text}
+              </span>
+              <span className="truncate text-zinc-700 dark:text-zinc-300">
+                {ev.type === "click" ? ev.label : ev.path}
+                {ev.type === "click" && ev.href ? (
+                  <span className="text-zinc-400"> → {ev.href}</span>
+                ) : null}
+              </span>
+            </span>
             <span
-              className={`rounded px-1.5 py-0.5 text-[10px] font-medium uppercase ${
-                ev.type === "click"
-                  ? "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300"
-                  : "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
-              }`}
+              className="shrink-0 text-xs text-zinc-400"
+              title={new Date(ev.ts).toLocaleString()}
             >
-              {ev.type}
+              {timeAgo(ev.ts, stats.generatedAt)}
             </span>
-            <span className="truncate text-zinc-700 dark:text-zinc-300">
-              {ev.type === "click" ? ev.label : ev.path}
-              {ev.type === "click" && ev.href ? (
-                <span className="text-zinc-400"> → {ev.href}</span>
-              ) : null}
-            </span>
-          </span>
-          <span className="shrink-0 text-xs text-zinc-400" title={new Date(ev.ts).toLocaleString()}>
-            {timeAgo(ev.ts, stats.generatedAt)}
-          </span>
-        </li>
-      ))}
+          </li>
+        );
+      })}
     </ul>
   );
+}
+
+/** Category-aware badge (text + color) for a recent event. */
+function badge(ev: AnalyticsStats["recent"][number]): { text: string; cls: string } {
+  if (ev.type === "pageview")
+    return {
+      text: "view",
+      cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
+    };
+  if (ev.category === "vehicle")
+    return {
+      text: "vehicle",
+      cls: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
+    };
+  if (ev.category === "route")
+    return {
+      text: "route",
+      cls: "bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300",
+    };
+  return {
+    text: "click",
+    cls: "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
+  };
 }
 
 function formatDay(day?: string): string {

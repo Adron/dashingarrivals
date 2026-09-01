@@ -2,8 +2,11 @@ import { describe, expect, it, beforeEach } from "vitest";
 import {
   cleanLabel,
   cleanPath,
+  cleanToken,
   deviceFromUA,
   referrerHost,
+  routeLabel,
+  vehicleLabel,
   getStats,
   recordEvent,
   type AnalyticsEvent,
@@ -80,5 +83,66 @@ describe("in-memory aggregation", () => {
 
     // Recent feed carries the newest event first.
     expect(s.recent[0].type).toBe("click");
+  });
+});
+
+describe("transit label helpers", () => {
+  it("cleanToken bounds and trims short identifiers", () => {
+    expect(cleanToken("  KCM  ")).toBe("KCM");
+    expect(cleanToken("")).toBeUndefined();
+    expect(cleanToken(123)).toBeUndefined();
+    expect(cleanToken("x".repeat(60))?.length).toBe(40);
+  });
+
+  it("routeLabel prefixes agency and falls back to routeId", () => {
+    expect(routeLabel({ agency: "KCM", routeShortName: "40" })).toBe("KCM 40");
+    expect(routeLabel({ agency: "ST", routeId: "100479" })).toBe("ST 100479");
+    expect(routeLabel({ routeShortName: "550" })).toBe("550");
+    expect(routeLabel({ agency: "KCM" })).toBe("");
+  });
+
+  it("vehicleLabel handles numeric fleet ids and ferry vessel names", () => {
+    expect(
+      vehicleLabel({ agency: "KCM", routeShortName: "40", vehicleNumber: "1234" }),
+    ).toBe("KCM 40 #1234");
+    // Ferries report a vessel name (non-numeric) and often no route.
+    expect(vehicleLabel({ agency: "WSF", vehicleNumber: "Wenatchee" })).toBe(
+      "WSF Wenatchee",
+    );
+    expect(vehicleLabel({ agency: "KCM", routeShortName: "40" })).toBe("KCM 40");
+  });
+});
+
+describe("transit + traffic-source aggregation", () => {
+  beforeEach(async () => {
+    await recordEvent(
+      ev({ type: "click", category: "vehicle", agency: "KCM", routeShortName: "40", vehicleNumber: "1234" }),
+      "v1",
+    );
+    await recordEvent(
+      ev({ type: "click", category: "route", agency: "ST", routeShortName: "550" }),
+      "v2",
+    );
+    await recordEvent(
+      ev({ type: "pageview", path: "/", country: "US", utmSource: "newsletter" }),
+      "v3",
+    );
+  });
+
+  it("routes vehicle/route clicks and geo/utm into their own lists", async () => {
+    const s = await getStats(Date.now());
+
+    // A vehicle click credits both the vehicle and its route.
+    expect(s.topVehicles.find((v) => v.key === "KCM 40 #1234")).toBeTruthy();
+    expect(s.topRoutes.find((r) => r.key === "KCM 40")).toBeTruthy();
+    // A route-open click credits the route.
+    expect(s.topRoutes.find((r) => r.key === "ST 550")).toBeTruthy();
+
+    // Vehicle/route clicks do NOT pollute the generic "most clicked" list.
+    expect(s.topClicks.find((c) => c.key === "KCM 40 #1234")).toBeFalsy();
+
+    // Traffic sources.
+    expect(s.countries.find((c) => c.key === "US")).toBeTruthy();
+    expect(s.campaigns.find((c) => c.key === "newsletter")).toBeTruthy();
   });
 });

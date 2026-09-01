@@ -12,6 +12,7 @@ import { AGENCY_COLORS, agencyColor } from "@/lib/agencyColors";
 import { resolveBearing } from "@/lib/geo";
 import { buildIconId, getVehicleIcon, ICON_PIXEL_RATIO, parseIconId } from "@/lib/vehicleIcons";
 import { useFilters, useSelectedRoute, useSelectedStop } from "@/lib/store";
+import { trackRouteOpen, trackVehicleClick } from "@/lib/analyticsClient";
 import { useTheme } from "@/lib/theme";
 import type { Stop, Vehicle, VehicleSnapshot, VehicleType } from "@/lib/types";
 
@@ -478,6 +479,13 @@ export default function MapView({ snapshot }: { snapshot: VehicleSnapshot | null
         const f = e.features?.[0];
         if (!f || f.geometry.type !== "Point") return;
         const props = f.properties ?? {};
+        // Analytics: which vehicle (and its route) a visitor clicked on.
+        trackVehicleClick({
+          agency: props.agency,
+          routeId: props.routeId,
+          routeShortName: props.routeShortName,
+          vehicleNumber: props.vehicleNumber,
+        });
         const popup = new maplibregl.Popup({ closeButton: true, offset: 8 })
           .setLngLat(f.geometry.coordinates as [number, number])
           .setHTML(popupHTML(props))
@@ -485,6 +493,12 @@ export default function MapView({ snapshot }: { snapshot: VehicleSnapshot | null
         // Clicking the route title overlays that route's shape + stops.
         const link = popup.getElement()?.querySelector(".va-popup-route-link");
         link?.addEventListener("click", () => {
+          // Analytics: which route a visitor chose to view on the map.
+          trackRouteOpen({
+            agency: props.agency,
+            routeId: props.routeId,
+            routeShortName: props.routeShortName,
+          });
           useSelectedRoute.getState().setSelectedRoute({
             agency: String(props.agency ?? ""),
             routeId: String(props.routeId ?? ""),

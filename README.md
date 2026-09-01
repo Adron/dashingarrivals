@@ -36,14 +36,13 @@ Built with **Next.js (App Router) + MapLibre GL**, deployed on **Vercel**.
 
 ```bash
 npm install
-cp .env.example .env.local   # defaults to mock data; no keys required
+cp .env.example .env.local   # no keys required to start
 npm run dev                  # http://localhost:3000
 ```
 
-By default (`USE_MOCK=1`) the app serves synthetic vehicles so it works offline.
-To use **real data**, set `USE_MOCK=0` — the OneBusAway public `TEST` key works for
-limited development. Request a production key by emailing
-`oba_api_key@soundtransit.org`, then set `OBA_API_KEY` in your environment.
+The app always uses live feeds. The OneBusAway public `TEST` key works for limited
+development; request a production key by emailing `oba_api_key@soundtransit.org`,
+then set `OBA_API_KEY` in your environment.
 
 ### Scripts
 
@@ -60,9 +59,9 @@ limited development. Request a production key by emailing
 See `.env.example` for all variables. Key ones:
 
 - `OBA_API_KEY` — OneBusAway key (`TEST` for dev).
-- `USE_MOCK` — `1` for synthetic data, `0` for live feeds.
 - `KV_REST_API_URL` / `KV_REST_API_TOKEN` — Upstash Redis (Vercel Marketplace) for a
-  shared snapshot cache across serverless instances. Blank ⇒ per-instance memory cache.
+  shared snapshot cache + analytics store across serverless instances. Blank ⇒
+  per-instance memory (ephemeral, not shared).
 - `NEXT_PUBLIC_BASEMAP_STYLE_URL` — MapLibre style (default: OpenFreeMap, no key).
 
 ## Deploy
