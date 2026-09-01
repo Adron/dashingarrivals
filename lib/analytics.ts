@@ -393,9 +393,33 @@ function getBackend(): Backend {
       new Redis({ url: config.kvUrl, token: config.kvToken }),
     );
   } else {
+    warnEphemeralAnalytics();
     backend = new MemoryBackend();
   }
   return backend;
+}
+
+/**
+ * Analytics are meant to be backed by the shared key-value store (Upstash Redis /
+ * Vercel KV). Without it we fall back to a per-instance in-memory store that is
+ * ephemeral and NOT shared across serverless instances — fine for local dev, but
+ * a silent data-loss trap in production where counts would reset on every cold
+ * start. Make that fallback loud (once) so a misconfigured deploy is caught
+ * instead of quietly discarding data. We log rather than throw so tracking can
+ * never surface an error to the visitor.
+ */
+function warnEphemeralAnalytics(): void {
+  const msg =
+    "[analytics] Key-value store not configured (KV_REST_API_URL / " +
+    "KV_REST_API_TOKEN missing) — using an ephemeral in-memory store. Counts " +
+    "reset on cold start and are not shared across instances. Configure Upstash " +
+    "Redis (Vercel KV) for durable analytics.";
+  // On a real production deploy, missing KV is almost certainly a misconfig.
+  if (process.env.VERCEL_ENV === "production") {
+    console.error(msg);
+  } else {
+    console.warn(msg);
+  }
 }
 
 // ---------------------------------------------------------------------------
