@@ -33,7 +33,6 @@ using the shared `TEST` key — but set at least `OBA_API_KEY` for real traffic.
 | Variable | Recommended value | Required? | Notes |
 |---|---|---|---|
 | `OBA_API_KEY` | _your OBA key_ | Recommended | Falls back to `TEST` (rate-limited). |
-| `USE_MOCK` | `0` | No | `1` serves synthetic vehicles instead of live feeds. |
 | `OBA_BASE_URL` | `https://api.pugetsound.onebusaway.org` | No | Default already correct. |
 | `NEXT_PUBLIC_BASEMAP_STYLE_URL` | `https://tiles.openfreemap.org/styles/liberty` | No | MapLibre basemap. |
 | `NEXT_PUBLIC_POLL_MS` | `5000` | No | Client vehicle poll interval (ms). |
@@ -90,5 +89,5 @@ In a Claude Code session you can run the interactive login yourself with
 - API routes (`/api/vehicles`, `/api/stops`, `/api/stops/[id]/arrivals`) run on the
   **Node.js runtime** because they decode GTFS-realtime protobuf — not the edge
   runtime.
-- CI and local builds run with `USE_MOCK=1`, so a build **never** depends on the
-  upstream transit feeds and won't fail if an agency feed is momentarily down.
+- `npm run build` does not call the upstream transit feeds, so CI and local builds
+  never fail if an agency feed is momentarily down.

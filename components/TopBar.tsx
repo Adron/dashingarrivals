@@ -38,30 +38,55 @@ export default function TopBar({
             </>
           )}
         </p>
-        <div className="mt-2 flex items-center gap-2">
+        <div className="mt-2 flex flex-col items-start gap-2">
           <ThemeToggle />
-          <Link
-            href="/analytics"
-            data-analytics="nav:analytics"
-            title="View site analytics"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-900 px-2.5 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              width="14"
-              height="14"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
+          <div className="flex items-center gap-2">
+            <Link
+              href="/analytics"
+              data-analytics="nav:analytics"
+              title="View site analytics"
+              className="inline-flex items-center gap-1 rounded-md bg-zinc-900 px-2 py-1 text-xs font-medium text-white shadow-sm transition-colors hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
             >
-              <path d="M3 3v18h18" />
-              <path d="M7 15l3-4 3 3 4-6" />
-            </svg>
-            Analytics
-          </Link>
+              <svg
+                viewBox="0 0 24 24"
+                width="16"
+                height="16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M3 3v18h18" />
+                <path d="M7 15l3-4 3 3 4-6" />
+              </svg>
+              Analytics
+            </Link>
+            <a
+              href="https://interlinedlist.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              data-analytics="nav:interlinedlist"
+              title="Visit InterlinedList"
+              className="inline-flex items-center gap-1 rounded-md border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-700 shadow-sm transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="16"
+                height="16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+              </svg>
+              InterlinedList
+            </a>
+          </div>
         </div>
       </div>
     </header>

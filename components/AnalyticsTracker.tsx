@@ -10,26 +10,7 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
-
-const ENDPOINT = "/api/analytics/track";
-
-function send(payload: Record<string, unknown>): void {
-  try {
-    const body = JSON.stringify(payload);
-    if (typeof navigator !== "undefined" && navigator.sendBeacon) {
-      const blob = new Blob([body], { type: "application/json" });
-      if (navigator.sendBeacon(ENDPOINT, blob)) return;
-    }
-    void fetch(ENDPOINT, {
-      method: "POST",
-      body,
-      keepalive: true,
-      headers: { "Content-Type": "application/json" },
-    }).catch(() => {});
-  } catch {
-    // Never throw from tracking.
-  }
-}
+import { track, readUtmSource } from "@/lib/analyticsClient";
 
 // Interactive elements we consider a meaningful "click".
 const INTERACTIVE = 'a, button, [role="button"], [role="link"], [role="tab"], [data-analytics]';
@@ -61,10 +42,11 @@ export default function AnalyticsTracker() {
   useEffect(() => {
     if (!pathname || lastPath.current === pathname) return;
     lastPath.current = pathname;
-    send({
+    track({
       type: "pageview",
       path: pathname,
       referrer: typeof document !== "undefined" ? document.referrer : "",
+      utmSource: readUtmSource(),
     });
   }, [pathname]);
 
@@ -75,6 +57,16 @@ export default function AnalyticsTracker() {
         const start = e.target as Element | null;
         const el = start?.closest?.(INTERACTIVE);
         if (!el) return;
+
+        // Skip MapLibre chrome (popup close/route buttons, zoom controls). Those
+        // map interactions are tracked explicitly by MapView with route/vehicle
+        // context, so counting them here too would double-count and add noise.
+        if (
+          !el.hasAttribute("data-analytics") &&
+          el.closest(".maplibregl-popup, .maplibregl-ctrl")
+        ) {
+          return;
+        }
 
         const payload: Record<string, unknown> = {
           type: "click",
@@ -91,7 +83,7 @@ export default function AnalyticsTracker() {
             // Non-URL href (e.g. mailto:) — leave href off.
           }
         }
-        send(payload);
+        track(payload);
       } catch {
         // Swallow — tracking must be invisible.
       }

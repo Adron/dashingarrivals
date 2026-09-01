@@ -30,6 +30,3 @@ jobs:
 
       - name: Build
         run: npm run build
-        env:
-          # Build against mock data so CI never depends on upstream transit feeds.
-          USE_MOCK: "1"

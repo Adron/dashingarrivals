@@ -15,7 +15,7 @@ Required to have a working production deployment:
 - [ ] **1. Merge the blank-map fix — PR #3.** This is what makes the live map actually render.
 - [ ] **2. Merge the agencies + ferries — PR #2.** Full regional coverage (Pierce/Kitsap/Everett/Community Transit + WA State Ferries).
 - [ ] **3. Set a production OneBusAway API key** in Vercel (`OBA_API_KEY`). Avoids rate-limit (429) gaps from the shared `TEST` key.
-- [ ] **4. Clean up the Vercel environment variables.** Remove/correct the empty `NEXT_PUBLIC_*` vars and confirm `USE_MOCK` isn't `1`.
+- [ ] **4. Clean up the Vercel environment variables.** Remove/correct the empty `NEXT_PUBLIC_*` vars.
 - [ ] **5. Verify the live site end-to-end** in a normal browser after it redeploys.
 
 Optional / post-launch polish (nice to have, not blocking):
@@ -109,15 +109,13 @@ runs on real data.
    - `NEXT_PUBLIC_BASEMAP_STYLE_URL` — delete it (the code default is fine), **or** set it to
      `https://tiles.openfreemap.org/styles/liberty`.
    - `NEXT_PUBLIC_POLL_MS` — delete it, **or** set it to `5000`.
-2. **Confirm** `USE_MOCK` is **not** `1` (delete it or set `0`) so production uses live feeds.
-3. **Redeploy** after any change (env-var edits don't apply to existing deployments).
+2. **Redeploy** after any change (env-var edits don't apply to existing deployments).
 
 Recommended production env vars:
 
 | Variable | Value | Required? |
 |---|---|---|
 | `OBA_API_KEY` | *(your OBA key)* | Recommended (see item 3) |
-| `USE_MOCK` | *(unset, or `0`)* | — |
 | `NEXT_PUBLIC_BASEMAP_STYLE_URL` | *(unset, or the OpenFreeMap URL)* | — |
 | `NEXT_PUBLIC_POLL_MS` | *(unset, or `5000`)* | — |
 | `KV_REST_API_URL` / `KV_REST_API_TOKEN` | *(from Upstash — item 6)* | Optional |

@@ -9,10 +9,14 @@ import { NextResponse, type NextRequest } from "next/server";
 import {
   cleanLabel,
   cleanPath,
+  cleanToken,
   deviceFromUA,
   recordEvent,
   referrerHost,
+  routeLabel,
+  vehicleLabel,
   type AnalyticsEvent,
+  type ClickCategory,
   type EventType,
 } from "@/lib/analytics";
 
@@ -21,6 +25,10 @@ export const dynamic = "force-dynamic";
 
 const VID_COOKIE = "da_vid";
 const VID_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
+
+function clickCategory(v: unknown): ClickCategory | undefined {
+  return v === "vehicle" || v === "route" || v === "ui" ? v : undefined;
+}
 
 async function readBody(req: NextRequest): Promise<Record<string, unknown>> {
   // sendBeacon sets our Blob's content-type; fetch fallback sends JSON too.
@@ -52,10 +60,28 @@ export async function POST(req: NextRequest) {
 
   if (type === "pageview") {
     ev.refHost = referrerHost(body.referrer, req.nextUrl.host);
+    // Vercel injects geo headers on production; absent locally / in preview.
+    const country = cleanToken(req.headers.get("x-vercel-ip-country"), 4);
+    if (country && country !== "XX") ev.country = country;
+    const utmSource = cleanToken(body.utmSource);
+    if (utmSource) ev.utmSource = utmSource;
   } else {
-    ev.label = cleanLabel(body.label) ?? "(unlabeled)";
-    const href = cleanLabel(body.href, 200);
-    if (href) ev.href = href;
+    const category = clickCategory(body.category);
+    if (category === "vehicle" || category === "route") {
+      ev.category = category;
+      ev.agency = cleanToken(body.agency);
+      ev.routeId = cleanToken(body.routeId);
+      ev.routeShortName = cleanToken(body.routeShortName);
+      if (category === "vehicle") ev.vehicleNumber = cleanToken(body.vehicleNumber);
+      // Friendly label for the recent-activity feed (does not affect counts).
+      ev.label =
+        (category === "vehicle" ? vehicleLabel(ev) : routeLabel(ev)) || category;
+    } else {
+      // Generic UI click: keep a human label + destination path.
+      ev.label = cleanLabel(body.label) ?? "(unlabeled)";
+      const href = cleanLabel(body.href, 200);
+      if (href) ev.href = href;
+    }
   }
 
   // Stable-per-browser anonymous id; created on first hit if absent.
