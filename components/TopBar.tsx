@@ -2,6 +2,7 @@
 
 // Header with title, live vehicle count, and freshness / source status.
 
+import Link from "next/link";
 import ThemeToggle from "@/components/ThemeToggle";
 import type { VehicleSnapshot } from "@/lib/types";
 
@@ -37,7 +38,31 @@ export default function TopBar({
             </>
           )}
         </p>
-        <ThemeToggle />
+        <div className="mt-2 flex items-center gap-2">
+          <ThemeToggle />
+          <Link
+            href="/analytics"
+            data-analytics="nav:analytics"
+            title="View site analytics"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-900 px-2.5 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="14"
+              height="14"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M3 3v18h18" />
+              <path d="M7 15l3-4 3 3 4-6" />
+            </svg>
+            Analytics
+          </Link>
+        </div>
       </div>
     </header>
   );
