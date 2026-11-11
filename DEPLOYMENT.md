@@ -38,6 +38,10 @@ using the shared `TEST` key — but set at least `OBA_API_KEY` for real traffic.
 | `NEXT_PUBLIC_POLL_MS` | `5000` | No | Client vehicle poll interval (ms). |
 | `CACHE_TTL_MS` | `5000` | No | Server snapshot freshness (ms). |
 | `KV_REST_API_URL` / `KV_REST_API_TOKEN` | _from Upstash_ | No | Shared cache — see step 3. |
+| `NEXT_PUBLIC_ACCOUNTS_ENABLED` | `true` | No | Shows sign-in and saved routes/stops — see step 3a. Off when unset. |
+| `SUBSTRATAL_API_URL` | `https://api.substratalapps.com` | No | Default already correct. |
+| `SUBSTRATAL_APP_ID` | `app_dashingarrivals` | No | Default already correct. |
+| `SUBSTRATAL_WEBHOOK_SECRET` | _`whsec_…` from step 3a_ | With accounts | Verifies Substratal webhooks. |
 
 ## 3. (Optional) Shared cache with Upstash Redis
 
@@ -51,6 +55,35 @@ Without Redis, each serverless instance keeps its **own** in-memory snapshot cac
    `KV_REST_API_URL` / `KV_REST_API_TOKEN` **or** `UPSTASH_REDIS_REST_URL` /
    `UPSTASH_REDIS_REST_TOKEN`, so no code change is needed.
 3. Redeploy. The cache layer detects Redis on boot and starts using it.
+
+## 3a. (Optional) User accounts with Substratal Apps
+
+Visitors can sign in with a [Substratal Apps](https://substratalapps.com) account
+to save their theme, Top 5 Routes, and stops across devices. The site stays free
+and fully usable signed out; favorites are then kept in the browser and merged
+into the account at sign-in.
+
+1. **Register the app** (once, as the Substratal superadmin):
+   `scripts/register-dashingarrivals.sh`. It creates `app_dashingarrivals` with
+   free access for every account and the settings schema for the favorites.
+   Staff registration matters: it's what allows the site's own sign-in form
+   (embedded login); a self-registered app gets `403 embedded_login_not_allowed`.
+2. **Turn the UI on**: set `NEXT_PUBLIC_ACCOUNTS_ENABLED=true` (it's inlined at
+   build time, so redeploy after setting it).
+3. **Subscribe the webhook** once the site is live:
+   `scripts/register-dashingarrivals.sh webhook`. Put the printed `whsec_…`
+   secret in `SUBSTRATAL_WEBHOOK_SECRET`, redeploy, and send the test event it
+   suggests. (To rotate, set both secrets comma-separated until the old one expires.)
+4. **Sign in as the app's first user**: `admin-dashingarrivals@thrashingcode.com`
+   is the site's own admin account. It's an ordinary Substratal user of
+   `app_dashingarrivals`, separate from the superadmin (`adronhall@substratalapps.com`)
+   that registers and owns the app.
+
+How it works: the browser only talks to this site. Route handlers under
+`/api/auth/*` and `/api/account/settings` call the Substratal API server-side and
+keep its tokens in HttpOnly cookies (`lib/session.ts`); Substratal's CORS only
+admits its own Hub, and this keeps tokens out of page scripts. Favorites live in
+Substratal's per-app settings for `app_dashingarrivals`.
 
 ## 4. Deploy & auto-deploys
 

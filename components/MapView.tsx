@@ -11,7 +11,7 @@ import { clientConfig } from "@/lib/clientConfig";
 import { AGENCY_COLORS, agencyColor } from "@/lib/agencyColors";
 import { resolveBearing } from "@/lib/geo";
 import { buildIconId, getVehicleIcon, ICON_PIXEL_RATIO, parseIconId } from "@/lib/vehicleIcons";
-import { useFilters, useSelectedRoute, useSelectedStop } from "@/lib/store";
+import { useFilters, useMapFocus, useSelectedRoute, useSelectedStop } from "@/lib/store";
 import { trackRouteOpen, trackVehicleClick } from "@/lib/analyticsClient";
 import { useTheme } from "@/lib/theme";
 import type { Stop, Vehicle, VehicleSnapshot, VehicleType } from "@/lib/types";
@@ -134,6 +134,7 @@ export default function MapView({ snapshot }: { snapshot: VehicleSnapshot | null
     null,
   );
   const selectedRoute = useSelectedRoute((s) => s.selectedRoute);
+  const focus = useMapFocus((s) => s.focus);
 
   // Filters mirrored into a ref for the render loop; kept in sync via effect.
   const { typeVisible, agencyVisible } = useFilters();
@@ -654,6 +655,17 @@ export default function MapView({ snapshot }: { snapshot: VehicleSnapshot | null
       cancelled = true;
     };
   }, [selectedRoute]);
+
+  // Fly to a place asked for from outside the map (e.g. a saved stop).
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !focus) return;
+    map.flyTo({
+      center: [focus.lon, focus.lat],
+      zoom: Math.max(map.getZoom(), focus.zoom),
+      duration: 800,
+    });
+  }, [focus]);
 
   return <div ref={containerRef} className="h-full w-full" />;
 }
