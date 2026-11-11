@@ -14,4 +14,9 @@ export const clientConfig = {
     "https://tiles.openfreemap.org/styles/dark",
   /** Client poll interval for /api/vehicles, in ms. Also drives tween duration. */
   pollMs: Number(process.env.NEXT_PUBLIC_POLL_MS) || 5000,
+  /**
+   * Show sign-in (Substratal accounts) and saved routes/stops. Off unless set
+   * to "true", so the UI stays hidden until app_dashingarrivals is registered.
+   */
+  accountsEnabled: process.env.NEXT_PUBLIC_ACCOUNTS_ENABLED === "true",
 };

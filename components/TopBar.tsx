@@ -3,6 +3,7 @@
 // Header with title, live vehicle count, and freshness / source status.
 
 import Link from "next/link";
+import AccountControls from "@/components/AccountControls";
 import ThemeToggle from "@/components/ThemeToggle";
 import type { VehicleSnapshot } from "@/lib/types";
 
@@ -87,6 +88,7 @@ export default function TopBar({
               InterlinedList
             </a>
           </div>
+          <AccountControls />
         </div>
       </div>
     </header>

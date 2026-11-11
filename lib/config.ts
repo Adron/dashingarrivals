@@ -32,4 +32,17 @@ export const config = {
     process.env.UPSTASH_REDIS_REST_TOKEN ||
     process.env.dashingarrivals_KV_REST_API_TOKEN ||
     "",
+
+  /** Substratal Apps API — user accounts and their saved settings. */
+  substratalApiUrl: (process.env.SUBSTRATAL_API_URL || "https://api.substratalapps.com").replace(
+    /\/+$/,
+    "",
+  ),
+  /** This site's Substratal Application id (also its OAuth client_id). */
+  substratalAppId: process.env.SUBSTRATAL_APP_ID || "app_dashingarrivals",
+  /** whsec_… signing secret(s) for Substratal webhooks; comma-separate two during a rotation. */
+  substratalWebhookSecrets: (process.env.SUBSTRATAL_WEBHOOK_SECRET || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean),
 };

@@ -1,12 +1,18 @@
 "use client";
 
 // Floating chip shown while a route overlay is active on the map. Displays the
-// route and a button to clear the overlay (mirrors the selected-route store).
+// route, a ☆ to add it to the Top 5 Routes, and a button to clear the overlay
+// (mirrors the selected-route store).
 
+import FavoriteStar from "@/components/FavoriteStar";
+import { useAccount, useIsFavoriteRoute } from "@/lib/account";
+import { MAX_FAVORITE_ROUTES } from "@/lib/accountSettings";
 import { useSelectedRoute } from "@/lib/store";
 
 export default function RouteOverlayBar() {
   const { selectedRoute, routeError, setSelectedRoute } = useSelectedRoute();
+  const saved = useIsFavoriteRoute(selectedRoute);
+  const full = useAccount((s) => s.favoriteRoutes.length >= MAX_FAVORITE_ROUTES);
   if (!selectedRoute) return null;
 
   return (
@@ -24,6 +30,13 @@ export default function RouteOverlayBar() {
             </span>
           ) : null}
         </span>
+        <FavoriteStar
+          active={saved}
+          disabled={!saved && full}
+          disabledTitle={`Your Top ${MAX_FAVORITE_ROUTES} Routes are full — remove one from Saved first`}
+          label={`route ${selectedRoute.shortName}`}
+          onToggle={() => useAccount.getState().toggleRoute(selectedRoute)}
+        />
         <button
           type="button"
           onClick={() => setSelectedRoute(null)}

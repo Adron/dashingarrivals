@@ -63,6 +63,9 @@ See `.env.example` for all variables. Key ones:
   shared snapshot cache + analytics store across serverless instances. Blank ⇒
   per-instance memory (ephemeral, not shared).
 - `NEXT_PUBLIC_BASEMAP_STYLE_URL` — MapLibre style (default: OpenFreeMap, no key).
+- `NEXT_PUBLIC_ACCOUNTS_ENABLED` — `true` shows optional sign-in with a
+  [Substratal Apps](https://substratalapps.com) account, which saves the theme,
+  Top 5 Routes, and stops across devices. See DEPLOYMENT.md → User accounts.
 
 ## Deploy
 

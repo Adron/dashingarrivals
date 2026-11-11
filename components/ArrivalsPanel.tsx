@@ -4,6 +4,8 @@
 // Bottom sheet on mobile, right-side panel on larger screens.
 
 import { useSyncExternalStore } from "react";
+import FavoriteStar from "@/components/FavoriteStar";
+import { useAccount, useIsFavoriteStop } from "@/lib/account";
 import { useSelectedStop } from "@/lib/store";
 import { useStopArrivals } from "@/components/useStopArrivals";
 import { formatCountdown } from "@/lib/time";
@@ -22,6 +24,7 @@ export default function ArrivalsPanel({ alerts }: { alerts: Alert[] }) {
   const { selectedStop, setSelectedStop } = useSelectedStop();
   const { data, loading, error } = useStopArrivals(selectedStop?.id ?? null);
   const now = useSyncExternalStore(subscribeClock, getNow, getNow);
+  const saved = useIsFavoriteStop(selectedStop?.id ?? null);
 
   if (!selectedStop) return null;
 
@@ -39,7 +42,7 @@ export default function ArrivalsPanel({ alerts }: { alerts: Alert[] }) {
       aria-label="Stop arrivals"
     >
       <header className="sticky top-0 flex items-start justify-between gap-2 border-b border-zinc-200 bg-white/95 px-4 py-3 backdrop-blur dark:border-zinc-700 dark:bg-zinc-900/95">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h2 className="truncate text-base font-semibold">
             {data?.stopName ?? selectedStop.name}
           </h2>
@@ -48,6 +51,20 @@ export default function ArrivalsPanel({ alerts }: { alerts: Alert[] }) {
             {selectedStop.direction ? ` · ${selectedStop.direction}` : ""}
           </p>
         </div>
+        <FavoriteStar
+          active={saved}
+          label={`stop ${selectedStop.code || selectedStop.name}`}
+          onToggle={() =>
+            useAccount.getState().toggleStop({
+              id: selectedStop.id,
+              code: selectedStop.code,
+              name: data?.stopName ?? selectedStop.name,
+              lat: selectedStop.lat,
+              lon: selectedStop.lon,
+              direction: selectedStop.direction,
+            })
+          }
+        />
         <button
           onClick={() => setSelectedStop(null)}
           className="shrink-0 rounded-full px-2 py-1 text-lg leading-none text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"

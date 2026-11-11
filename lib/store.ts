@@ -65,3 +65,21 @@ export const useSelectedRoute = create<SelectedRouteState>((set) => ({
   setSelectedRoute: (route) => set({ selectedRoute: route, routeError: false }),
   setRouteError: (error) => set({ routeError: error }),
 }));
+
+/** A one-shot request to move the map (e.g. to a saved stop picked from a menu). */
+export interface MapFocus {
+  lat: number;
+  lon: number;
+  zoom: number;
+}
+
+interface MapFocusState {
+  focus: MapFocus | null;
+  focusOn: (focus: MapFocus) => void;
+}
+
+export const useMapFocus = create<MapFocusState>((set) => ({
+  focus: null,
+  // A fresh object each call, so asking for the same place twice still moves the map.
+  focusOn: (focus) => set({ focus: { ...focus } }),
+}));

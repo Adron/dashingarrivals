@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
+import AccountBootstrap from "@/components/AccountBootstrap";
 import AnalyticsTracker from "@/components/AnalyticsTracker";
 import "./globals.css";
 
@@ -38,6 +39,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body className="h-full">
         {children}
         <AnalyticsTracker />
+        <AccountBootstrap />
       </body>
     </html>
   );
