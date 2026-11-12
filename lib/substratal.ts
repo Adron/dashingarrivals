@@ -205,18 +205,20 @@ export async function getSettings(accessToken: string): Promise<AccountSettings>
   return fromSubstratal(await api<SubstratalAppSettings>("GET", settingsPath(), { token: accessToken }));
 }
 
+/** Save a settings patch. Answers the updated settings and whose they are. */
 export async function patchSettings(
   accessToken: string,
   patch: AccountSettingsPatch,
-): Promise<AccountSettings> {
+): Promise<{ userId: string | null; settings: AccountSettings }> {
   const overrides = toSubstratalOverrides(patch);
-  if (Object.keys(overrides).length === 0) return getSettings(accessToken);
-  return fromSubstratal(
-    await api<SubstratalAppSettings>("PATCH", settingsPath(), {
-      token: accessToken,
-      body: { overrides },
-    }),
-  );
+  const res =
+    Object.keys(overrides).length === 0
+      ? await api<SubstratalAppSettings>("GET", settingsPath(), { token: accessToken })
+      : await api<SubstratalAppSettings>("PATCH", settingsPath(), {
+          token: accessToken,
+          body: { overrides },
+        });
+  return { userId: res.user_id ?? null, settings: fromSubstratal(res) };
 }
 
 /** For tests only: forget remembered refreshes. */

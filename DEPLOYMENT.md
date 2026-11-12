@@ -37,7 +37,7 @@ using the shared `TEST` key — but set at least `OBA_API_KEY` for real traffic.
 | `NEXT_PUBLIC_BASEMAP_STYLE_URL` | `https://tiles.openfreemap.org/styles/liberty` | No | MapLibre basemap. |
 | `NEXT_PUBLIC_POLL_MS` | `5000` | No | Client vehicle poll interval (ms). |
 | `CACHE_TTL_MS` | `5000` | No | Server snapshot freshness (ms). |
-| `KV_REST_API_URL` / `KV_REST_API_TOKEN` | _from Upstash_ | No | Shared cache — see step 3. |
+| `KV_REST_API_URL` / `KV_REST_API_TOKEN` | _from Upstash_ | No | Shared cache, analytics, and the Most Popular Top 5 — see step 3. |
 | `NEXT_PUBLIC_ACCOUNTS_ENABLED` | `true` | No | Shows sign-in and saved routes/stops — see step 3a. Off when unset. |
 | `SUBSTRATAL_API_URL` | `https://api.substratalapps.com` | No | Default already correct. |
 | `SUBSTRATAL_APP_ID` | `app_dashingarrivals` | No | Default already correct. |
@@ -60,8 +60,10 @@ Without Redis, each serverless instance keeps its **own** in-memory snapshot cac
 
 Visitors can sign in with a [Substratal Apps](https://substratalapps.com) account
 to save their theme, Top 5 Routes, and stops across devices. The site stays free
-and fully usable signed out; favorites are then kept in the browser and merged
-into the account at sign-in.
+and fully usable signed out. Favorites belong to an account: saving one needs a
+signed-in account, and nothing is kept in the browser, so a shared browser never
+shows one person's Top 5 to the next. Signed out, the Saved menu shows the
+**Most Popular Top 5** instead: the routes found in the most accounts' Top 5.
 
 1. **Register the app** (once, as the Substratal superadmin):
    `scripts/register-dashingarrivals.sh`. It creates `app_dashingarrivals` with
@@ -83,7 +85,20 @@ How it works: the browser only talks to this site. Route handlers under
 `/api/auth/*` and `/api/account/settings` call the Substratal API server-side and
 keep its tokens in HttpOnly cookies (`lib/session.ts`); Substratal's CORS only
 admits its own Hub, and this keeps tokens out of page scripts. Favorites live in
-Substratal's per-app settings for `app_dashingarrivals`.
+Substratal's per-app settings for `app_dashingarrivals`, one record per account.
+
+The Most Popular Top 5 (`GET /api/popular-routes`, `lib/popularRoutes.ts`) is a
+tally in the same Upstash Redis as the cache and analytics: each account counts
+once per route in its Top 5, updated on every save and at sign-in (which also
+backfills accounts that saved before the tally existed). Account ids are stored
+hashed, and an `access.revoked` webhook removes that account's share. Without
+Redis the tally is per-instance memory, so production needs Redis for it to be
+meaningful.
+
+To audit or clean saved favorites (e.g. an account holding routes that aren't
+its owner's), run `scripts/favorites-admin.sh` as the superadmin to list every
+account's favorites, then `scripts/favorites-admin.sh clear <user_id>` to empty
+that account's Top 5.
 
 ## 4. Deploy & auto-deploys
 

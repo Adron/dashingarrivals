@@ -3,6 +3,7 @@ import {
   _resetRefreshCacheForTests,
   getSettings,
   login,
+  patchSettings,
   refreshSession,
   SubstratalError,
 } from "@/lib/substratal";
@@ -73,6 +74,22 @@ describe("Substratal client", () => {
       "https://api.substratalapps.com/users/me/apps/app_dashingarrivals/settings",
     );
     expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe("Bearer tok");
+  });
+
+  it("reports whose settings a save updated, so the popularity tally counts the right account", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({
+        user_id: "usr_7",
+        resolved: { favorite_routes: [{ agency: "KCM", route_id: "100001", short_name: "1" }] },
+        sources: {},
+      }),
+    );
+    const { userId, settings } = await patchSettings("tok", {
+      favoriteRoutes: [{ agency: "KCM", routeId: "100001", shortName: "1", color: "#123456" }],
+    });
+    expect(fetchMock.mock.calls[0][1].method).toBe("PATCH");
+    expect(userId).toBe("usr_7");
+    expect(settings.favoriteRoutes.map((r) => r.routeId)).toEqual(["100001"]);
   });
 
   it("shares one refresh call between concurrent requests (refresh tokens are single-use)", async () => {

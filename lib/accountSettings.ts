@@ -134,6 +134,7 @@ export function sanitizePatch(v: unknown): AccountSettingsPatch {
 
 /** The subset of GET/PATCH /users/{id}/apps/{appId}/settings we read. */
 export interface SubstratalAppSettings {
+  user_id?: string;
   resolved?: Record<string, unknown>;
   sources?: Record<string, string>;
   overrides?: Record<string, unknown>;
@@ -187,25 +188,4 @@ export function toSubstratalOverrides(patch: AccountSettingsPatch): Record<strin
     }));
   }
   return overrides;
-}
-
-// ---------------------------------------------------------------------------
-// Signing in with favorites saved on this device.
-
-/**
- * Merge favorites saved on this device (while signed out) into the account's.
- * The account's entries come first; new local ones are appended, then the
- * caps apply, so an account's existing Top 5 is never displaced. Returns null
- * when there's nothing new to write.
- */
-export function mergeLocalFavorites(
-  account: Pick<AccountSettings, "favoriteRoutes" | "favoriteStops">,
-  local: Pick<AccountSettings, "favoriteRoutes" | "favoriteStops">,
-): Pick<AccountSettings, "favoriteRoutes" | "favoriteStops"> | null {
-  const favoriteRoutes = sanitizeRoutes([...account.favoriteRoutes, ...local.favoriteRoutes]);
-  const favoriteStops = sanitizeStops([...account.favoriteStops, ...local.favoriteStops]);
-  const changed =
-    favoriteRoutes.length !== account.favoriteRoutes.length ||
-    favoriteStops.length !== account.favoriteStops.length;
-  return changed ? { favoriteRoutes, favoriteStops } : null;
 }

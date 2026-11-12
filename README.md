@@ -60,12 +60,13 @@ See `.env.example` for all variables. Key ones:
 
 - `OBA_API_KEY` — OneBusAway key (`TEST` for dev).
 - `KV_REST_API_URL` / `KV_REST_API_TOKEN` — Upstash Redis (Vercel Marketplace) for a
-  shared snapshot cache + analytics store across serverless instances. Blank ⇒
+  shared snapshot cache, analytics, and Most Popular Top 5 tally across serverless instances. Blank ⇒
   per-instance memory (ephemeral, not shared).
 - `NEXT_PUBLIC_BASEMAP_STYLE_URL` — MapLibre style (default: OpenFreeMap, no key).
 - `NEXT_PUBLIC_ACCOUNTS_ENABLED` — `true` shows optional sign-in with a
   [Substratal Apps](https://substratalapps.com) account, which saves the theme,
-  Top 5 Routes, and stops across devices. See DEPLOYMENT.md → User accounts.
+  Top 5 Routes, and stops across devices. Signed out, the Saved menu shows the
+  Most Popular Top 5 across all accounts. See DEPLOYMENT.md → User accounts.
 
 ## Deploy
 

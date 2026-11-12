@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   fromSubstratal,
   MAX_FAVORITE_ROUTES,
-  mergeLocalFavorites,
   sanitizePatch,
   sanitizeRoutes,
   sanitizeStops,
@@ -102,28 +101,5 @@ describe("Substratal wire format", () => {
 
   it("tolerates an empty or partial response", () => {
     expect(fromSubstratal({})).toEqual({ theme: null, favoriteRoutes: [], favoriteStops: [] });
-  });
-});
-
-describe("mergeLocalFavorites", () => {
-  it("keeps the account's entries first and never displaces its Top 5", () => {
-    const account = { favoriteRoutes: [1, 2, 3, 4].map((n) => route(n)), favoriteStops: [] };
-    const local = { favoriteRoutes: [route(9), route(10)], favoriteStops: [] };
-    const merged = mergeLocalFavorites(account, local);
-    expect(merged?.favoriteRoutes.map((r) => r.shortName)).toEqual(["1", "2", "3", "4", "9"]);
-  });
-
-  it("returns null when the device adds nothing new", () => {
-    const account = { favoriteRoutes: [route(1)], favoriteStops: [] };
-    expect(mergeLocalFavorites(account, { favoriteRoutes: [route(1)], favoriteStops: [] })).toBeNull();
-    expect(mergeLocalFavorites(account, { favoriteRoutes: [], favoriteStops: [] })).toBeNull();
-  });
-
-  it("merges stops too", () => {
-    const merged = mergeLocalFavorites(
-      { favoriteRoutes: [], favoriteStops: [{ id: "a", code: "", name: "A", lat: 1, lon: 1 }] },
-      { favoriteRoutes: [], favoriteStops: [{ id: "b", code: "", name: "B", lat: 2, lon: 2 }] },
-    );
-    expect(merged?.favoriteStops.map((s) => s.id)).toEqual(["a", "b"]);
   });
 });
