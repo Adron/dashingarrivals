@@ -3,9 +3,11 @@
 // Client account state: who's signed in, and their Top 5 Routes, saved stops,
 // and theme.
 //
-// Signed out, favorites are kept on this device (localStorage). Signed in,
-// they live in the Substratal account via our /api/account/settings route,
-// and anything saved on the device is merged into the account, then cleared.
+// Favorites belong to an account: they live in Substratal via our
+// /api/account/settings route, and saving one needs a signed-in account whose
+// settings loaded. Nothing is kept on the device, so a shared browser never
+// shows (or carries into the next sign-in) someone else's Top 5. Signed out,
+// the Saved menu shows the "Most Popular Top 5" across all accounts instead.
 //
 // Every request to /api/auth/* and /api/account/* runs one at a time through
 // a queue. Substratal refresh tokens are single-use, so two parallel requests
@@ -13,7 +15,6 @@
 
 import { create } from "zustand";
 import {
-  mergeLocalFavorites,
   routeKey,
   sanitizeRoutes,
   sanitizeStops,
@@ -26,6 +27,7 @@ import {
 import { useTheme } from "@/lib/theme";
 // Type-only: erased at build, so no server code reaches the client bundle.
 import type { SessionPayload } from "@/lib/accountApi";
+import type { PopularRoute } from "@/lib/popularRoutes";
 import type { AccountUser } from "@/lib/substratal";
 
 export class AccountError extends Error {
@@ -37,31 +39,20 @@ export class AccountError extends Error {
   }
 }
 
-const LOCAL_KEY = "da_favorites";
+// Earlier versions kept signed-out favorites here and merged them into
+// whichever account signed in next. Removed on load so they can't leak.
+const LEGACY_LOCAL_KEY = "da_favorites";
 
-function readLocal(): Pick<AccountSettings, "favoriteRoutes" | "favoriteStops"> {
+function clearLegacyLocal(): void {
   try {
-    const raw = JSON.parse(localStorage.getItem(LOCAL_KEY) ?? "{}") as Record<string, unknown>;
-    return {
-      favoriteRoutes: sanitizeRoutes(raw.favoriteRoutes),
-      favoriteStops: sanitizeStops(raw.favoriteStops),
-    };
+    localStorage.removeItem(LEGACY_LOCAL_KEY);
   } catch {
-    return { favoriteRoutes: [], favoriteStops: [] };
+    // Storage unavailable (private mode, or not a browser).
   }
 }
 
-function writeLocal(favorites: Pick<AccountSettings, "favoriteRoutes" | "favoriteStops">): void {
-  try {
-    if (favorites.favoriteRoutes.length === 0 && favorites.favoriteStops.length === 0) {
-      localStorage.removeItem(LOCAL_KEY);
-    } else {
-      localStorage.setItem(LOCAL_KEY, JSON.stringify(favorites));
-    }
-  } catch {
-    // Storage unavailable (private mode); favorites just won't persist.
-  }
-}
+type Favorites = Pick<AccountSettings, "favoriteRoutes" | "favoriteStops">;
+const NO_FAVORITES: Favorites = { favoriteRoutes: [], favoriteStops: [] };
 
 // One request at a time (see the header comment).
 let queue: Promise<unknown> = Promise.resolve();
@@ -101,16 +92,20 @@ type Status = "idle" | "loading" | "signedOut" | "signedIn";
 interface AccountState {
   status: Status;
   user: AccountUser | null;
-  /** True when favorites are stored in the account (signed in, settings readable). */
+  /** True when favorites can be saved: signed in, and the account's settings loaded. */
   synced: boolean;
   /** Why a signed-in account's settings aren't available, if they aren't. */
   settingsError: string | null;
   /** The last failed save, shown in the menu until the next success. */
   saveError: string | null;
+  /** The signed-in account's favorites; always empty unless `synced`. */
   favoriteRoutes: FavoriteRoute[];
   favoriteStops: FavoriteStop[];
+  /** The "Most Popular Top 5" across all accounts, shown when signed out. */
+  popularRoutes: PopularRoute[];
 
   init: () => void;
+  loadPopular: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<{ mfaRequired: boolean }>;
   verifyMfa: (answer: { code: string } | { recoveryCode: string }) => Promise<void>;
   signUp: (email: string, password: string, displayName: string) => Promise<void>;
@@ -127,20 +122,22 @@ let initialized = false;
 
 export const useAccount = create<AccountState>((set, get) => {
   /** The account's favorites as last confirmed by the server (for reverting). */
-  let saved: Pick<AccountSettings, "favoriteRoutes" | "favoriteStops"> = {
-    favoriteRoutes: [],
-    favoriteStops: [],
-  };
+  let saved: Favorites = NO_FAVORITES;
 
   function save(patch: AccountSettingsPatch): void {
+    // Whose favorites these are: a reply that lands after someone else has
+    // signed in on this page must not overwrite theirs.
+    const owner = get().user?.id;
     void enqueue(() =>
       request<{ settings: AccountSettings }>("PATCH", "/api/account/settings", patch),
     ).then(
       ({ settings }) => {
+        if (get().user?.id !== owner) return;
         saved = { favoriteRoutes: settings.favoriteRoutes, favoriteStops: settings.favoriteStops };
         set({ ...saved, saveError: null });
       },
       (err: unknown) => {
+        if (get().user?.id !== owner) return;
         if (err instanceof AccountError && err.code === "signed_out") {
           applySession({ user: null, settings: null });
           set({ saveError: "Your session ended. Sign in again to keep saving." });
@@ -153,26 +150,24 @@ export const useAccount = create<AccountState>((set, get) => {
 
   /** Adopt a session payload; `fresh` = the user just signed in on this page. */
   function applySession(payload: SessionPayload, fresh = false): void {
+    // Start every session from nothing, so no one else's favorites linger.
+    saved = NO_FAVORITES;
+
     if (!payload.user) {
-      set({
-        status: "signedOut",
-        user: null,
-        synced: false,
-        settingsError: null,
-        ...readLocal(),
-      });
+      set({ status: "signedOut", user: null, synced: false, settingsError: null, ...NO_FAVORITES });
+      void get().loadPopular();
       return;
     }
 
     if (!payload.settings) {
       // Signed in, but the account's settings can't be used (e.g. no access to
-      // the app yet): keep favorites on this device so nothing is lost.
+      // the app yet): nothing can be saved until they can.
       set({
         status: "signedIn",
         user: payload.user,
         synced: false,
         settingsError: payload.settingsError ?? "Saved settings are unavailable.",
-        ...readLocal(),
+        ...NO_FAVORITES,
       });
       return;
     }
@@ -192,14 +187,6 @@ export const useAccount = create<AccountState>((set, get) => {
     } else if (fresh) {
       save({ theme: useTheme.getState().mode });
     }
-
-    // Fold in anything saved on this device while signed out.
-    const merged = mergeLocalFavorites(saved, readLocal());
-    writeLocal({ favoriteRoutes: [], favoriteStops: [] });
-    if (merged) {
-      set(merged);
-      save(merged);
-    }
   }
 
   async function signedIn(promise: Promise<SessionPayload>): Promise<void> {
@@ -214,11 +201,13 @@ export const useAccount = create<AccountState>((set, get) => {
     saveError: null,
     favoriteRoutes: [],
     favoriteStops: [],
+    popularRoutes: [],
 
     init: () => {
       if (initialized) return;
       initialized = true;
-      set({ status: "loading", ...readLocal() });
+      clearLegacyLocal();
+      set({ status: "loading" });
 
       useTheme.subscribe((state, prev) => {
         if (state.mode === prev.mode || applyingAccountTheme) return;
@@ -227,7 +216,7 @@ export const useAccount = create<AccountState>((set, get) => {
 
       enqueue(() => request<SessionPayload>("GET", "/api/auth/session")).then(
         (payload) => applySession(payload),
-        // Accounts unreachable: carry on signed out with device favorites.
+        // Accounts unreachable: carry on signed out.
         () => applySession({ user: null, settings: null }),
       );
     },
@@ -260,9 +249,26 @@ export const useAccount = create<AccountState>((set, get) => {
         applySession({ user: null, settings: null });
       }),
 
+    loadPopular: async () => {
+      try {
+        const res = await fetch("/api/popular-routes");
+        if (!res.ok) return;
+        const data = (await res.json()) as { routes?: unknown };
+        const raw = Array.isArray(data.routes) ? data.routes : [];
+        const popularRoutes = raw.flatMap((r: Partial<PopularRoute>) => {
+          const [route] = sanitizeRoutes([r]);
+          return route ? [{ ...route, count: Number(r.count) || 0 }] : [];
+        });
+        set({ popularRoutes: popularRoutes.slice(0, MAX_FAVORITE_ROUTES) });
+      } catch {
+        // Offline or unavailable: the menu just shows none.
+      }
+    },
+
     forgotPassword: (email) => enqueue(() => request<void>("POST", "/api/auth/forgot", { email })),
 
     toggleRoute: (route) => {
+      if (!get().synced) return;
       const current = get().favoriteRoutes;
       const key = routeKey(route);
       const exists = current.some((r) => routeKey(r) === key);
@@ -271,19 +277,18 @@ export const useAccount = create<AccountState>((set, get) => {
         ? current.filter((r) => routeKey(r) !== key)
         : sanitizeRoutes([...current, route]);
       set({ favoriteRoutes });
-      if (get().synced) save({ favoriteRoutes });
-      else writeLocal({ favoriteRoutes, favoriteStops: get().favoriteStops });
+      save({ favoriteRoutes });
     },
 
     toggleStop: (stop) => {
+      if (!get().synced) return;
       const current = get().favoriteStops;
       const exists = current.some((s) => s.id === stop.id);
       const favoriteStops = exists
         ? current.filter((s) => s.id !== stop.id)
         : sanitizeStops([...current, stop]);
       set({ favoriteStops });
-      if (get().synced) save({ favoriteStops });
-      else writeLocal({ favoriteRoutes: get().favoriteRoutes, favoriteStops });
+      save({ favoriteStops });
     },
   };
 });

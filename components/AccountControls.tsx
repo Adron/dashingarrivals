@@ -1,13 +1,14 @@
 "use client";
 
-// TopBar controls for accounts: the "Saved" menu (Top 5 Routes + saved stops,
-// which works signed in or out) and the Sign in / account button.
+// TopBar controls for accounts: the "Saved" menu and the Sign in / account
+// button. Signed in, Saved lists the account's own Top 5 Routes and stops;
+// signed out, it shows the "Most Popular Top 5" across all accounts.
 // Hidden entirely unless NEXT_PUBLIC_ACCOUNTS_ENABLED is "true".
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import SignInDialog from "@/components/SignInDialog";
 import { useAccount } from "@/lib/account";
-import { MAX_FAVORITE_ROUTES, type FavoriteStop } from "@/lib/accountSettings";
+import { MAX_FAVORITE_ROUTES, type FavoriteRoute, type FavoriteStop } from "@/lib/accountSettings";
 import { clientConfig } from "@/lib/clientConfig";
 import { useMapFocus, useSelectedRoute, useSelectedStop } from "@/lib/store";
 
@@ -79,11 +80,15 @@ function Popover({
 function SavedMenu() {
   const routes = useAccount((s) => s.favoriteRoutes);
   const stops = useAccount((s) => s.favoriteStops);
+  const popular = useAccount((s) => s.popularRoutes);
   const synced = useAccount((s) => s.synced);
   const status = useAccount((s) => s.status);
+  const settingsError = useAccount((s) => s.settingsError);
   const saveError = useAccount((s) => s.saveError);
   const { toggleRoute, toggleStop } = useAccount.getState();
+  const signedIn = status === "signedIn";
 
+  const openRoute = (r: FavoriteRoute) => useSelectedRoute.getState().setSelectedRoute(r);
   const openStop = (stop: FavoriteStop) => {
     useSelectedStop.getState().setSelectedStop({ ...stop, routeIds: [] });
     useMapFocus.getState().focusOn({ lat: stop.lat, lon: stop.lon, zoom: 16 });
@@ -91,7 +96,7 @@ function SavedMenu() {
 
   return (
     <Popover
-      title="Your Top 5 Routes and saved stops"
+      title={signedIn ? "Your Top 5 Routes and saved stops" : "Most popular saved routes"}
       analytics="nav:saved"
       label={
         <>
@@ -99,69 +104,99 @@ function SavedMenu() {
         </>
       }
     >
-      {(close) => (
-        <div className="text-sm">
-          <Section title={`Top ${MAX_FAVORITE_ROUTES} Routes`}>
-            {routes.length === 0 ? (
-              <Empty>Open a route from a vehicle, then tap ☆ to add it.</Empty>
-            ) : (
-              routes.map((r) => (
-                <Row
-                  key={`${r.agency}:${r.routeId}`}
-                  onOpen={() => {
-                    useSelectedRoute.getState().setSelectedRoute(r);
-                    close();
-                  }}
-                  onRemove={() => toggleRoute(r)}
-                  removeLabel={`Remove route ${r.shortName}`}
-                >
-                  <span
-                    className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
-                    style={{ background: r.color }}
-                  />
-                  <span className="font-semibold">{r.shortName}</span>
-                  <span className="truncate text-xs text-zinc-500 dark:text-zinc-400">{r.agency}</span>
-                </Row>
-              ))
-            )}
-          </Section>
+      {(close) =>
+        !signedIn ? (
+          <div className="text-sm">
+            <Section title={`Most Popular Top ${MAX_FAVORITE_ROUTES}`}>
+              {popular.length === 0 ? (
+                <Empty>No routes saved yet. Be the first!</Empty>
+              ) : (
+                popular.map((r) => (
+                  <Row
+                    key={`${r.agency}:${r.routeId}`}
+                    onOpen={() => {
+                      openRoute(r);
+                      close();
+                    }}
+                  >
+                    <RouteLabel route={r} />
+                    <span className="ml-auto shrink-0 text-xs text-zinc-500 dark:text-zinc-400">
+                      {r.count} {r.count === 1 ? "save" : "saves"}
+                    </span>
+                  </Row>
+                ))
+              )}
+            </Section>
+            <p className="border-t border-zinc-100 px-2 pt-2 text-[11px] text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+              The routes most often saved to accounts&apos; Top {MAX_FAVORITE_ROUTES}. Sign in to save
+              your own routes and stops.
+            </p>
+          </div>
+        ) : (
+          <div className="text-sm">
+            <Section title={`Top ${MAX_FAVORITE_ROUTES} Routes`}>
+              {routes.length === 0 ? (
+                <Empty>Open a route from a vehicle, then tap ☆ to add it.</Empty>
+              ) : (
+                routes.map((r) => (
+                  <Row
+                    key={`${r.agency}:${r.routeId}`}
+                    onOpen={() => {
+                      openRoute(r);
+                      close();
+                    }}
+                    onRemove={() => toggleRoute(r)}
+                    removeLabel={`Remove route ${r.shortName}`}
+                  >
+                    <RouteLabel route={r} />
+                  </Row>
+                ))
+              )}
+            </Section>
 
-          <Section title="Stops">
-            {stops.length === 0 ? (
-              <Empty>Open a stop&apos;s arrivals, then tap ☆ to save it.</Empty>
-            ) : (
-              stops.map((s) => (
-                <Row
-                  key={s.id}
-                  onOpen={() => {
-                    openStop(s);
-                    close();
-                  }}
-                  onRemove={() => toggleStop(s)}
-                  removeLabel={`Remove stop ${s.name}`}
-                >
-                  <span className="truncate">{s.name}</span>
-                  {s.code && (
-                    <span className="shrink-0 text-xs text-zinc-500 dark:text-zinc-400">#{s.code}</span>
-                  )}
-                </Row>
-              ))
-            )}
-          </Section>
+            <Section title="Stops">
+              {stops.length === 0 ? (
+                <Empty>Open a stop&apos;s arrivals, then tap ☆ to save it.</Empty>
+              ) : (
+                stops.map((s) => (
+                  <Row
+                    key={s.id}
+                    onOpen={() => {
+                      openStop(s);
+                      close();
+                    }}
+                    onRemove={() => toggleStop(s)}
+                    removeLabel={`Remove stop ${s.name}`}
+                  >
+                    <span className="truncate">{s.name}</span>
+                    {s.code && (
+                      <span className="shrink-0 text-xs text-zinc-500 dark:text-zinc-400">#{s.code}</span>
+                    )}
+                  </Row>
+                ))
+              )}
+            </Section>
 
-          {saveError && (
-            <p className="px-2 pt-1 text-xs text-amber-700 dark:text-amber-400">{saveError}</p>
-          )}
-          <p className="border-t border-zinc-100 px-2 pt-2 text-[11px] text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
-            {synced
-              ? "Saved to your account."
-              : status === "signedIn"
-                ? "Saved on this device."
-                : "Saved on this device. Sign in to keep them across devices."}
-          </p>
-        </div>
-      )}
+            {saveError && (
+              <p className="px-2 pt-1 text-xs text-amber-700 dark:text-amber-400">{saveError}</p>
+            )}
+            <p className="border-t border-zinc-100 px-2 pt-2 text-[11px] text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+              {synced ? "Saved to your account." : (settingsError ?? "Saved settings are unavailable.")}
+            </p>
+          </div>
+        )
+      }
     </Popover>
+  );
+}
+
+function RouteLabel({ route }: { route: FavoriteRoute }) {
+  return (
+    <>
+      <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: route.color }} />
+      <span className="font-semibold">{route.shortName}</span>
+      <span className="truncate text-xs text-zinc-500 dark:text-zinc-400">{route.agency}</span>
+    </>
   );
 }
 
@@ -255,8 +290,9 @@ function Row({
 }: {
   children: ReactNode;
   onOpen: () => void;
-  onRemove: () => void;
-  removeLabel: string;
+  /** Omitted for read-only rows (the Most Popular list). */
+  onRemove?: () => void;
+  removeLabel?: string;
 }) {
   return (
     <li className="flex items-center gap-1 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800">
@@ -267,15 +303,17 @@ function Row({
       >
         {children}
       </button>
-      <button
-        type="button"
-        onClick={onRemove}
-        aria-label={removeLabel}
-        title="Remove"
-        className="shrink-0 rounded px-2 py-1 text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-100"
-      >
-        ×
-      </button>
+      {onRemove && (
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label={removeLabel}
+          title="Remove"
+          className="shrink-0 rounded px-2 py-1 text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-100"
+        >
+          ×
+        </button>
+      )}
     </li>
   );
 }

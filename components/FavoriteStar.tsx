@@ -1,8 +1,10 @@
 "use client";
 
 // ☆/★ toggle for saving a route (Top 5) or a stop. Renders nothing unless
-// accounts are enabled.
+// accounts are enabled, and is disabled unless an account is signed in with
+// its settings loaded (favorites are only ever saved to an account).
 
+import { useAccount } from "@/lib/account";
 import { clientConfig } from "@/lib/clientConfig";
 
 export default function FavoriteStar({
@@ -20,13 +22,21 @@ export default function FavoriteStar({
   /** Tooltip when disabled (e.g. "Top 5 is full"). */
   disabledTitle?: string;
 }) {
+  const synced = useAccount((s) => s.synced);
+  const signedIn = useAccount((s) => s.status === "signedIn");
   if (!clientConfig.accountsEnabled) return null;
-  const title = disabled ? disabledTitle : active ? `Remove ${label} from saved` : `Save ${label}`;
+  const blocked = !synced || disabled;
+  const blockedTitle = synced
+    ? disabledTitle
+    : signedIn
+      ? "Saving is unavailable for this account right now"
+      : `Sign in to save ${label}`;
+  const title = blocked ? blockedTitle : active ? `Remove ${label} from saved` : `Save ${label}`;
   return (
     <button
       type="button"
       onClick={onToggle}
-      disabled={disabled}
+      disabled={blocked}
       aria-pressed={active}
       aria-label={title}
       title={title}

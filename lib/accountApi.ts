@@ -3,7 +3,8 @@
 // errors into short, human messages.
 
 import { NextResponse } from "next/server";
-import type { AccountSettings } from "@/lib/accountSettings";
+import type { AccountSettings, FavoriteRoute } from "@/lib/accountSettings";
+import { syncUserRoutes } from "@/lib/popularRoutes";
 import { getSettings, getUser, SubstratalError, type AccountUser } from "@/lib/substratal";
 
 /** What GET /api/auth/session (and every sign-in route) returns. */
@@ -62,9 +63,25 @@ export async function loadSession(token: string): Promise<SessionPayload> {
       (err: unknown) => ({ ok: false as const, err }),
     ),
   ]);
-  if (settings.ok) return { user, settings: settings.s };
+  if (settings.ok) {
+    // Also backfills accounts whose Top 5 predates the popularity tally.
+    await syncPopular(user.id, settings.s.favoriteRoutes);
+    return { user, settings: settings.s };
+  }
   if (settings.err instanceof SubstratalError && settings.err.status === 401) throw settings.err;
   return { user, settings: null, settingsError: errorMessage(settings.err).message };
+}
+
+/**
+ * Update the "Most Popular Top 5" tally with a user's Top 5. Best effort: a
+ * key-value store outage never fails a sign-in or a save.
+ */
+export async function syncPopular(userId: string, routes: FavoriteRoute[]): Promise<void> {
+  try {
+    await syncUserRoutes(userId, routes);
+  } catch (err) {
+    console.warn("[account] popular routes sync failed", err);
+  }
 }
 
 /** Read a JSON body without throwing on a malformed one. */
