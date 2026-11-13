@@ -14,7 +14,7 @@
 set -euo pipefail
 
 API="${SUBSTRATAL_API:-https://api.substratalapps.com}"
-EMAIL="${SUPERADMIN_EMAIL:-adronhall@substratalapps.com}"
+EMAIL="${SUPERADMIN_EMAIL:-adronhall@proton.me}"
 SITE="${SITE_URL:-https://dashingarrivals.com}"
 APP_ID="app_dashingarrivals"
 VERSION="Substratal-Version: 1"

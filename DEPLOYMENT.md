@@ -78,7 +78,7 @@ shows one person's Top 5 to the next. Signed out, the Saved menu shows the
    suggests. (To rotate, set both secrets comma-separated until the old one expires.)
 4. **Sign in as the app's first user**: `admin-dashingarrivals@thrashingcode.com`
    is the site's own admin account. It's an ordinary Substratal user of
-   `app_dashingarrivals`, separate from the superadmin (`adronhall@substratalapps.com`)
+   `app_dashingarrivals`, separate from the superadmin (`adronhall@proton.me`)
    that registers and owns the app.
 
 How it works: the browser only talks to this site. Route handlers under
