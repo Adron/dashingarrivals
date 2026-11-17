@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Registers app_dashingarrivals, this site's Substratal Application, so
+# Registers app_dashing-arrivals, this site's Substratal Application, so
 # visitors can sign in with a Substratal account and save their theme,
 # Top 5 Routes, and stops. Run it once as the Substratal superadmin (staff
 # registration is what allows the site's own sign-in form); running it again
-# brings app_dashingarrivals back to these settings.
+# brings app_dashing-arrivals back to these settings.
 #
 #   scripts/register-dashingarrivals.sh                  # production
 #   scripts/register-dashingarrivals.sh webhook          # after the site is deployed
@@ -16,7 +16,7 @@ set -euo pipefail
 API="${SUBSTRATAL_API:-https://api.substratalapps.com}"
 EMAIL="${SUPERADMIN_EMAIL:-adronhall@proton.me}"
 SITE="${SITE_URL:-https://dashingarrivals.com}"
-APP_ID="app_dashingarrivals"
+APP_ID="app_dashing-arrivals"
 VERSION="Substratal-Version: 1"
 need() { command -v "$1" >/dev/null || { echo "register-dashingarrivals: $1 is required" >&2; exit 1; }; }
 need curl

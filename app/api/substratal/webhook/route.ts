@@ -2,7 +2,7 @@
 // events, which its trust model asks every Application to subscribe to.
 //
 // We keep no server-side session store to purge: once a user's access to
-// app_dashingarrivals is revoked, their next settings call returns
+// app_dashing-arrivals is revoked, their next settings call returns
 // 403 entitlement_required and the client shows them as signed in without
 // saved settings. The one thing we hold per account is their share of the
 // "Most Popular Top 5" tally, which access.revoked removes.

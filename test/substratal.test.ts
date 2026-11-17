@@ -71,7 +71,7 @@ describe("Substratal client", () => {
     );
     await getSettings("tok");
     expect(fetchMock.mock.calls[0][0]).toBe(
-      "https://api.substratalapps.com/users/me/apps/app_dashingarrivals/settings",
+      "https://api.substratalapps.com/users/me/apps/app_dashing-arrivals/settings",
     );
     expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe("Bearer tok");
   });

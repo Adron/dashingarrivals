@@ -40,7 +40,7 @@ using the shared `TEST` key — but set at least `OBA_API_KEY` for real traffic.
 | `KV_REST_API_URL` / `KV_REST_API_TOKEN` | _from Upstash_ | No | Shared cache, analytics, and the Most Popular Top 5 — see step 3. |
 | `NEXT_PUBLIC_ACCOUNTS_ENABLED` | `true` | No | Shows sign-in and saved routes/stops — see step 3a. Off when unset. |
 | `SUBSTRATAL_API_URL` | `https://api.substratalapps.com` | No | Default already correct. |
-| `SUBSTRATAL_APP_ID` | `app_dashingarrivals` | No | Default already correct. |
+| `SUBSTRATAL_APP_ID` | `app_dashing-arrivals` | No | Default already correct. |
 | `SUBSTRATAL_WEBHOOK_SECRET` | _`whsec_…` from step 3a_ | With accounts | Verifies Substratal webhooks. |
 
 ## 3. (Optional) Shared cache with Upstash Redis
@@ -66,7 +66,7 @@ shows one person's Top 5 to the next. Signed out, the Saved menu shows the
 **Most Popular Top 5** instead: the routes found in the most accounts' Top 5.
 
 1. **Register the app** (once, as the Substratal superadmin):
-   `scripts/register-dashingarrivals.sh`. It creates `app_dashingarrivals` with
+   `scripts/register-dashingarrivals.sh`. It creates `app_dashing-arrivals` with
    free access for every account and the settings schema for the favorites.
    Staff registration matters: it's what allows the site's own sign-in form
    (embedded login); a self-registered app gets `403 embedded_login_not_allowed`.
@@ -78,14 +78,14 @@ shows one person's Top 5 to the next. Signed out, the Saved menu shows the
    suggests. (To rotate, set both secrets comma-separated until the old one expires.)
 4. **Sign in as the app's first user**: `admin-dashingarrivals@thrashingcode.com`
    is the site's own admin account. It's an ordinary Substratal user of
-   `app_dashingarrivals`, separate from the superadmin (`adronhall@proton.me`)
+   `app_dashing-arrivals`, separate from the superadmin (`adronhall@proton.me`)
    that registers and owns the app.
 
 How it works: the browser only talks to this site. Route handlers under
 `/api/auth/*` and `/api/account/settings` call the Substratal API server-side and
 keep its tokens in HttpOnly cookies (`lib/session.ts`); Substratal's CORS only
 admits its own Hub, and this keeps tokens out of page scripts. Favorites live in
-Substratal's per-app settings for `app_dashingarrivals`, one record per account.
+Substratal's per-app settings for `app_dashing-arrivals`, one record per account.
 
 The Most Popular Top 5 (`GET /api/popular-routes`, `lib/popularRoutes.ts`) is a
 tally in the same Upstash Redis as the cache and analytics: each account counts

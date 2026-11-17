@@ -39,7 +39,7 @@ export const config = {
     "",
   ),
   /** This site's Substratal Application id (also its OAuth client_id). */
-  substratalAppId: process.env.SUBSTRATAL_APP_ID || "app_dashingarrivals",
+  substratalAppId: process.env.SUBSTRATAL_APP_ID || "app_dashing-arrivals",
   /** whsec_… signing secret(s) for Substratal webhooks; comma-separate two during a rotation. */
   substratalWebhookSecrets: (process.env.SUBSTRATAL_WEBHOOK_SECRET || "")
     .split(",")

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Audit and clean saved favorites for app_dashingarrivals, as the Substratal
+# Audit and clean saved favorites for app_dashing-arrivals, as the Substratal
 # superadmin (needs users.list to read, users.manage to clear).
 #
 #   scripts/favorites-admin.sh                          # every account's Top 5 + stops
@@ -17,7 +17,7 @@ set -euo pipefail
 
 API="${SUBSTRATAL_API:-https://api.substratalapps.com}"
 EMAIL="${SUPERADMIN_EMAIL:-adronhall@proton.me}"
-APP_ID="app_dashingarrivals"
+APP_ID="app_dashing-arrivals"
 VERSION="Substratal-Version: 1"
 need() { command -v "$1" >/dev/null || { echo "favorites-admin: $1 is required" >&2; exit 1; }; }
 need curl

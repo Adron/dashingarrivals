@@ -1,7 +1,7 @@
 // Account settings shared by the server routes and the client store: the saved
 // theme, "Top 5 Routes", and saved transit stops.
 //
-// They live in Substratal's per-app settings for app_dashingarrivals. The
+// They live in Substratal's per-app settings for app_dashing-arrivals. The
 // Application's settings_schema declares `favorite_routes` and `favorite_stops`
 // (snake_case, as stored); `theme` is a reserved key every app may override.
 // The schema can't express maxItems, so the caps are enforced here, on every
